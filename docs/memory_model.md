@@ -2,10 +2,24 @@
 
 ## Design Principles
 
-1. **Raw memory is sacred.** Once written, a raw record is never modified, summarized over, or deleted.
-2. **Promotion is additive.** Creating an episodic or semantic note never removes its source.
-3. **Every layer is human-readable.** All memory exists as plain Markdown alongside the JSON.
-4. **Links are explicit.** Related notes are connected with wikilinks so the knowledge graph is inspectable.
+1. **Raw memory is sacred.** Once written, a raw record is never modified, summarized over, or deleted. The `text` field is immutable from the moment `store_raw()` returns.
+2. **Promotion is additive and append-only.** Creating an episodic or semantic note never removes or replaces its source. Reflections always create new files — they never overwrite prior reflections.
+3. **IDs are permanent; titles are human-readable.** Every record has a stable 8-character UUID prefix (`id`) that never changes, and a derived `title` field that is short and readable. Filenames are `{id}.md` so they always resolve correctly.
+4. **Every layer is human-readable.** All memory exists as plain Markdown alongside the JSON.
+5. **Links are explicit and readable.** Wikilinks use `[[subdir/id|Readable Title]]` format so they are navigable in Obsidian and legible in any text editor.
+6. **Core memory requires human approval.** The `vault/core/` directory is never written to by any automated process.
+
+---
+
+## ID vs Title
+
+| Field | Purpose | Stable? |
+|---|---|---|
+| `id` | 8-char UUID prefix — the permanent reference | Yes — never changes |
+| `title` | Short hyphen-joined words — for human readability | No — derived from content |
+
+The `id` is the canonical identifier used in filenames (`{id}.md`), `raw_ref` links, and `source_ids` lists.  
+The `title` is used as Obsidian wikilink display text: `[[raw/a1b2c3d4|remember-this-important]]`.
 
 ---
 
@@ -18,22 +32,20 @@ The exact, verbatim capture of an input.
 - **Created by:** `ingest()`
 - **Stored at:** `memory/raw/{id}.json`, `vault/raw/{id}.md`
 - **Schema:** `memory/schemas/raw_memory.schema.json`
-- **Key field:** `text` — this field is immutable after creation
-- **Importance scoring:** Heuristic — based on presence of keywords like "important", "project", "goal"
+- **Key field:** `text` — immutable after creation. No code path ever rewrites this file.
+- **Title:** First 6 alphanumeric words of the text, lowercased and hyphen-joined.
 
 Raw memories are analogous to sensory memory in cognitive models: everything is stored before anything is evaluated.
 
 ### Episodic Memory
 
-A summarized, meaningful event derived from one or more raw memories.
+A summarized, meaningful event derived from one raw memory.
 
-- **Created by:** `ingest()` when importance >= threshold
+- **Created by:** `ingest()` when `importance >= config.importance_threshold` (default 0.5)
 - **Stored at:** `memory/episodic/{id}.json`, `vault/episodic/{id}.md`
 - **Schema:** `memory/schemas/episodic_memory.schema.json`
-- **Key fields:** `summary`, `raw_ref` (link back to source raw memory)
-
-Episodic memories answer the question: *"What happened?"*  
-They are compact but always traceable to their raw source.
+- **Key fields:** `summary`, `raw_ref` (ID of source raw memory)
+- **Source link:** `[[raw/{raw_id}|{raw_title}]]` — readable link back to the raw source
 
 ### Semantic Memory
 
@@ -43,62 +55,73 @@ A reusable concept, rule, pattern, or lesson that transcends a single event.
 - **Stored at:** `memory/semantic/{id}.json`, `vault/semantic/{id}.md`
 - **Schema:** `memory/schemas/semantic_memory.schema.json`
 - **Key fields:** `concept`, `description`
-
-Semantic memories answer the question: *"What does this mean in general?"*  
-Examples: "Recursive functions need a base case", "The project deadline is Q2".
+- **Title:** The concept name, slugified.
 
 ### Core Memory
 
-Long-term stable identity, rules, and goals. Manually curated.
+Long-term stable identity, rules, and goals. **Manually curated only.**
 
-- **Stored at:** `vault/core/` (Markdown only — no JSON schema)
-- **Written by:** Humans, or by an agent acting on reflection outputs
-- **Example files:** `identity.md`, `rules.md`, `goals.md`, `preferences.md`
+- **Stored at:** `vault/core/` (Markdown only — no automated JSON writing)
+- **Written by:** Humans, after reviewing reflection suggestions
+- **Protected by:** `vault/core/PROTECTED.md` — explains the protection contract
+- **Automated processes:** May never write here. Reflections write suggestions into `vault/reflections/` only.
 
-Core memory is not automatically generated. It represents durable, trusted knowledge.
+See `vault/core/PROTECTED.md` for the full protection contract.
 
 ### Reflections
 
-Recursive analysis of what has been stored.
+Recursive analysis of what has been stored. Always appended, never replaced.
 
 - **Created by:** `reflect()`
 - **Stored at:** `memory/reflections/{id}.json`, `vault/reflections/{id}.md`
 - **Schema:** `memory/schemas/reflection.schema.json`
-- **Key fields:** `content` (Markdown analysis), `source_ids` (which memories were analyzed)
+- **Key fields:** `content` (Markdown analysis), `source_ids` (IDs of reviewed memories)
+- **Title:** `reflection-YYYYMMDD-HHMM` (date-stamped)
+- **Append-only:** Every `reflect()` call creates a new file. Prior reflections are never modified.
+- **Safety limits:** Only reviews episodic and semantic memories (not prior reflections, unless `config.allow_reflection_on_reflections = True`).
 
-Reflections answer: *"What patterns emerged? What should be remembered long-term? What is implied?"*
+### Tasks and Agents
 
-### Tasks
+Human-maintained operational notes.
 
-Implied future actions derived from reflections or direct input.
+- `vault/tasks/` — implied future actions derived from reflection review
+- `vault/agents/` — per-agent configuration notes
 
-- **Stored at:** `vault/tasks/` (Markdown notes)
-- **Created by:** Humans, or by an agent acting on reflection outputs
+---
 
-### Agents
+## Obsidian Link Format
 
-Per-agent configuration and observation notes.
+All links use the `[[subdir/id|Readable Title]]` format:
 
-- **Stored at:** `vault/agents/` (Markdown notes)
+```markdown
+[[raw/a1b2c3d4|remember-this-important-concept]]
+[[episodic/e5f6a7b8|i-learned-that-building]]
+[[semantic/c9d0e1f2|memory-layering]]
+```
+
+- `subdir/id` is the vault-relative path to `vault/{subdir}/{id}.md` — always resolves correctly.
+- `Readable Title` is the `title` field from the memory record.
+- Links in the `links:` frontmatter list and in note body sections use this same format.
 
 ---
 
 ## Frontmatter Schema
 
-Every vault note includes YAML frontmatter with these standard fields:
+Every vault note includes YAML frontmatter:
 
 ```yaml
 ---
-id: a1b2c3d4          # 8-char unique identifier
-type: raw             # raw | episodic | semantic | reflection
-created: 2024-01-15T10:30:00  # ISO 8601 UTC
-source: manual        # origin label
-importance: 0.75      # float [0, 1]
+id: a1b2c3d4
+title: remember-this-important-concept
+type: raw
+created: 2024-01-15T10:30:00
+source: manual
+importance: 0.75
 tags:
   - learning
   - project
 links:
-  - "[[raw/9e8f7a6b]]"
+  - "[[episodic/e5f6a7b8|i-learned-that-building]]"
 ---
 ```
 
@@ -106,23 +129,52 @@ links:
 
 ## Importance Scoring
 
-The current heuristic adds +0.15 for each of these keywords found in the text:
+Weighted heuristic — replace `memory_store.py:_score_importance` with an LLM call when ready.
 
-```
-"i learned", "important", "remember", "project", "goal",
-"discovered", "realized", "key insight", "critical", "must not forget"
-```
+**Base score:** 0.10  
+**Additive signals (first match wins for multi-word phrases):**
 
-Base score is 0.3. Maximum is 1.0.  
-The default promotion threshold is **0.5** (configurable in `Config`).
+| Signal | Weight |
+|---|---|
+| "i learned" | +0.20 |
+| "key insight" | +0.20 |
+| "must not forget" | +0.20 |
+| "critical" | +0.15 |
+| "important" | +0.15 |
+| "remember" | +0.12 |
+| "project" | +0.12 |
+| "goal" | +0.12 |
+| "discovered" / "realized" | +0.10 each |
+| "need to" | +0.08 |
+| "should " / "will " / "always" / "never" | +0.05 each |
 
-Replace with a trained classifier or LLM confidence score when ready.
+**Length bonus:** +0.05 for ≥100 chars, +0.10 for ≥300 chars  
+**Maximum:** 1.0 (clamped)  
+**Default promotion threshold:** 0.5 (configurable via `Config.importance_threshold`)
+
+### Why the base is 0.10
+
+Plain sentences with no signal words score 0.10–0.15.  
+Any meaningful statement with one or two keywords scores 0.25–0.35.  
+The threshold at 0.5 requires multiple clear signals, ensuring only genuinely notable input is promoted.
+
+---
+
+## Reflection Safety Limits
+
+Configured in `Config`:
+
+| Field | Default | Effect |
+|---|---|---|
+| `max_memories_per_reflection` | 50 | Caps the number of source memories per pass (most recent kept) |
+| `allow_reflection_on_reflections` | `False` | Prevents reflections from recursively reviewing prior reflections |
+| `allow_core_modification` | `False` | Documents intent; not yet enforced in code |
 
 ---
 
 ## Tag Extraction
 
-Tags are extracted by keyword-to-tag mapping:
+Tags are keyword-mapped from the raw text:
 
 | Keyword in text | Tag applied |
 |---|---|

@@ -3,53 +3,117 @@ import re
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from .config import Config
 
-# Keywords that raise importance score during ingestion
-IMPORTANCE_KEYWORDS = [
-    "i learned", "important", "remember", "project", "goal",
-    "discovered", "realized", "key insight", "critical", "must not forget",
+# ---------------------------------------------------------------------------
+# Importance scoring
+#
+# Multi-word phrases are listed before their component words so they match
+# (and add weight) before the shorter word would also match.
+# Swap _score_importance with an LLM confidence call when ready.
+# ---------------------------------------------------------------------------
+
+_IMPORTANCE_SIGNALS: List[Tuple[str, float]] = [
+    ("i learned",       0.20),
+    ("key insight",     0.20),
+    ("must not forget", 0.20),
+    ("critical",        0.15),
+    ("important",       0.15),
+    ("remember",        0.12),
+    ("project",         0.12),
+    ("goal",            0.12),
+    ("discovered",      0.10),
+    ("realized",        0.10),
+    ("need to",         0.08),
+    ("should ",         0.05),
+    ("will ",           0.05),
+    ("always",          0.05),
+    ("never",           0.05),
 ]
+_IMPORTANCE_BASE = 0.10
+
+_TAG_KEYWORD_MAP: Dict[str, str] = {
+    "project":    "project",
+    "goal":       "goal",
+    "learned":    "learning",
+    "important":  "important",
+    "remember":   "recall",
+    "error":      "error",
+    "bug":        "bug",
+    "idea":       "idea",
+    "question":   "question",
+    "task":       "task",
+    "experiment": "experiment",
+    "concept":    "concept",
+    "pattern":    "pattern",
+    "rule":       "rule",
+}
+
+# Maps memory type -> vault subdirectory name
+_VAULT_DIR: Dict[str, str] = {
+    "raw":        "raw",
+    "episodic":   "episodic",
+    "semantic":   "semantic",
+    "reflection": "reflections",
+}
 
 
 def _generate_id() -> str:
     return str(uuid.uuid4())[:8]
 
 
-def _extract_importance(text: str) -> float:
+def _score_importance(text: str) -> float:
+    """Weighted keyword + length heuristic for importance [0.0, 1.0].
+
+    Signals are additive. Longer entries get a small length bonus.
+    Replace this function body with an LLM confidence call when ready —
+    the signature and return type do not need to change.
+    """
     text_lower = text.lower()
-    score = 0.3
-    for kw in IMPORTANCE_KEYWORDS:
-        if kw in text_lower:
-            score += 0.15
+    score = _IMPORTANCE_BASE
+    for phrase, weight in _IMPORTANCE_SIGNALS:
+        if phrase in text_lower:
+            score += weight
+    # Length bonus: longer entries tend to be more substantive
+    n = len(text.strip())
+    if n >= 300:
+        score += 0.10
+    elif n >= 100:
+        score += 0.05
     return round(min(score, 1.0), 3)
 
 
 def _extract_tags(text: str) -> List[str]:
     text_lower = text.lower()
-    keyword_tag_map = {
-        "project": "project",
-        "goal": "goal",
-        "learned": "learning",
-        "important": "important",
-        "remember": "recall",
-        "error": "error",
-        "bug": "bug",
-        "idea": "idea",
-        "question": "question",
-        "task": "task",
-        "experiment": "experiment",
-        "concept": "concept",
-        "pattern": "pattern",
-        "rule": "rule",
-    }
     tags = []
-    for kw, tag in keyword_tag_map.items():
+    for kw, tag in _TAG_KEYWORD_MAP.items():
         if kw in text_lower and tag not in tags:
             tags.append(tag)
     return tags
+
+
+def _make_title(text: str, max_words: int = 6) -> str:
+    """Short, filesystem-safe title derived from text content.
+
+    Uses the first N alphanumeric words, lowercased and hyphen-joined.
+    The ID is the stable permanent identifier; this title is only for
+    human readability.
+    """
+    words = re.findall(r'[a-zA-Z0-9]+', text.strip())[:max_words]
+    return '-'.join(w.lower() for w in words) or "untitled"
+
+
+def _wikilink(vault_subdir: str, mem_id: str, title: Optional[str] = None) -> str:
+    """Build an Obsidian-compatible wikilink.
+
+    Format: [[subdir/id|Readable Title]] when a title is available,
+    falling back to [[subdir/id]] when not.
+    The subdir/id path resolves to vault/{subdir}/{id}.md.
+    """
+    path = f"{vault_subdir}/{mem_id}" if vault_subdir else mem_id
+    return f"[[{path}|{title}]]" if title else f"[[{path}]]"
 
 
 def _write_markdown(path: Path, frontmatter: Dict, body: str) -> None:
@@ -73,17 +137,20 @@ class MemoryStore:
     # ------------------------------------------------------------------ raw --
 
     def store_raw(self, text: str, source: str = "manual") -> Dict:
+        """Write a verbatim raw memory. Never called again on the same record."""
         mem_id = _generate_id()
         now = datetime.utcnow().isoformat()
-        importance = _extract_importance(text)
+        importance = _score_importance(text)
         tags = _extract_tags(text)
+        title = _make_title(text)
 
         memory = {
             "id": mem_id,
+            "title": title,
             "type": "raw",
             "created": now,
             "source": source,
-            "text": text,
+            "text": text,         # immutable — never rewritten after this point
             "importance": importance,
             "tags": tags,
             "links": [],
@@ -92,11 +159,11 @@ class MemoryStore:
         (self.config.memory_path / "raw" / f"{mem_id}.json").write_text(
             json.dumps(memory, indent=2), encoding="utf-8"
         )
-
         _write_markdown(
             self.config.vault_path / "raw" / f"{mem_id}.md",
             frontmatter={
                 "id": mem_id,
+                "title": title,
                 "type": "raw",
                 "created": now,
                 "source": source,
@@ -105,7 +172,7 @@ class MemoryStore:
                 "links": [],
             },
             body=(
-                f"# Raw Memory: {mem_id}\n\n"
+                f"# {title}\n\n"
                 f"{text}\n\n"
                 "[[Raw Memory]] | [[Episodic Memory]] | [[Core Memory]]"
             ),
@@ -121,12 +188,16 @@ class MemoryStore:
         tags: List[str],
         importance: float,
         source: str,
+        raw_title: Optional[str] = None,
     ) -> Dict:
         mem_id = _generate_id()
         now = datetime.utcnow().isoformat()
+        title = _make_title(summary)
+        raw_link = _wikilink("raw", raw_id, raw_title)
 
         memory = {
             "id": mem_id,
+            "title": title,
             "type": "episodic",
             "created": now,
             "source": source,
@@ -134,28 +205,28 @@ class MemoryStore:
             "raw_ref": raw_id,
             "importance": importance,
             "tags": tags,
-            "links": [f"[[raw/{raw_id}]]"],
+            "links": [raw_link],
         }
 
         (self.config.memory_path / "episodic" / f"{mem_id}.json").write_text(
             json.dumps(memory, indent=2), encoding="utf-8"
         )
-
         _write_markdown(
             self.config.vault_path / "episodic" / f"{mem_id}.md",
             frontmatter={
                 "id": mem_id,
+                "title": title,
                 "type": "episodic",
                 "created": now,
                 "source": source,
                 "importance": importance,
                 "tags": tags,
-                "links": [f"[[raw/{raw_id}]]"],
+                "links": [raw_link],
             },
             body=(
-                f"# Episodic Memory: {mem_id}\n\n"
+                f"# {title}\n\n"
                 f"**Summary:** {summary}\n\n"
-                f"**Source:** [[raw/{raw_id}]]\n\n"
+                f"**Source:** {raw_link}\n\n"
                 "[[Episodic Memory]] | [[Semantic Memory]] | [[Reflections]]"
             ),
         )
@@ -173,9 +244,11 @@ class MemoryStore:
     ) -> Dict:
         mem_id = _generate_id()
         now = datetime.utcnow().isoformat()
+        title = _make_title(concept)
 
         memory = {
             "id": mem_id,
+            "title": title,
             "type": "semantic",
             "created": now,
             "source": source,
@@ -189,11 +262,11 @@ class MemoryStore:
         (self.config.memory_path / "semantic" / f"{mem_id}.json").write_text(
             json.dumps(memory, indent=2), encoding="utf-8"
         )
-
         _write_markdown(
             self.config.vault_path / "semantic" / f"{mem_id}.md",
             frontmatter={
                 "id": mem_id,
+                "title": title,
                 "type": "semantic",
                 "created": now,
                 "source": source,
@@ -202,7 +275,7 @@ class MemoryStore:
                 "links": [],
             },
             body=(
-                f"# Semantic Memory: {concept}\n\n"
+                f"# {concept}\n\n"
                 f"**Concept:** {concept}\n\n"
                 f"**Description:** {description}\n\n"
                 "[[Semantic Memory]] | [[Core Memory]] | [[Episodic Memory]]"
@@ -217,40 +290,60 @@ class MemoryStore:
         content: str,
         source_ids: List[str],
         tags: List[str],
+        source_titles: Optional[Dict[str, Tuple[str, str]]] = None,
     ) -> Dict:
+        """Append a new reflection note.
+
+        Each call always creates a new file — prior reflections are never
+        overwritten or modified.
+
+        source_titles: optional {id: (vault_subdir, display_title)} mapping
+                       used to produce readable Obsidian wikilinks.
+                       Falls back to bare [[id]] when absent.
+        """
         mem_id = _generate_id()
         now = datetime.utcnow().isoformat()
+        title = f"reflection-{datetime.utcnow().strftime('%Y%m%d-%H%M')}"
+
+        links: List[str] = []
+        for sid in source_ids:
+            if source_titles and sid in source_titles:
+                subdir, display = source_titles[sid]
+                links.append(_wikilink(subdir, sid, display))
+            else:
+                links.append(f"[[{sid}]]")
 
         memory = {
             "id": mem_id,
+            "title": title,
             "type": "reflection",
             "created": now,
             "source": "reflection_engine",
             "content": content,
             "source_ids": source_ids,
             "tags": tags,
-            "links": [f"[[{sid}]]" for sid in source_ids],
+            "links": links,
         }
 
         (self.config.memory_path / "reflections" / f"{mem_id}.json").write_text(
             json.dumps(memory, indent=2), encoding="utf-8"
         )
-
         _write_markdown(
             self.config.vault_path / "reflections" / f"{mem_id}.md",
             frontmatter={
                 "id": mem_id,
+                "title": title,
                 "type": "reflection",
                 "created": now,
                 "source": "reflection_engine",
                 "tags": tags,
-                "links": [f"[[{sid}]]" for sid in source_ids],
+                "links": links,
             },
             body=(
-                f"# Reflection: {mem_id}\n\n"
+                f"# {title}\n\n"
                 f"{content}\n\n"
                 "**Sources:** "
-                + ", ".join(f"[[{sid}]]" for sid in source_ids)
+                + ", ".join(links)
                 + "\n\n[[Reflections]] | [[Episodic Memory]] | [[Semantic Memory]]"
             ),
         )

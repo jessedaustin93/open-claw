@@ -2,15 +2,9 @@ import re
 from typing import Dict, Optional
 
 from .config import Config
-from .memory_store import MemoryStore, _extract_importance, _extract_tags
+from .memory_store import MemoryStore, _extract_tags, _score_importance
 
-# Promotion threshold: raw -> episodic
-PROMOTION_KEYWORDS = [
-    "i learned", "important", "remember", "project", "goal",
-    "discovered", "realized", "key insight",
-]
-
-# Semantic extraction threshold: episodic -> semantic
+# Semantic extraction: episodic -> semantic
 SEMANTIC_KEYWORDS = [
     "concept", "principle", "rule", "pattern", "definition",
     "always", "never", "means", "is defined as",
@@ -20,7 +14,8 @@ SEMANTIC_KEYWORDS = [
 def ingest(text: str, source: str = "manual", config: Optional[Config] = None) -> Dict:
     """Ingest raw text into the memory system.
 
-    Always stores a raw memory. Promotes to episodic if importance >= threshold,
+    Always stores a raw memory (verbatim, immutable).
+    Promotes to episodic if importance >= threshold,
     and further to semantic if semantic keywords are present.
     """
     if config is None:
@@ -28,7 +23,7 @@ def ingest(text: str, source: str = "manual", config: Optional[Config] = None) -
 
     store = MemoryStore(config)
 
-    # Raw memory is always stored exactly as received — never modified.
+    # Raw memory is always stored exactly as received — never modified after this call.
     raw = store.store_raw(text, source=source)
     result: Dict = {"raw": raw, "episodic": None, "semantic": None}
 
@@ -43,6 +38,7 @@ def ingest(text: str, source: str = "manual", config: Optional[Config] = None) -
             tags=tags,
             importance=importance,
             source=source,
+            raw_title=raw.get("title"),   # enables readable wikilink in episodic note
         )
         result["episodic"] = episodic
 

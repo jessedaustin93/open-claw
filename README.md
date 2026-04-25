@@ -60,6 +60,7 @@ Example note:
 ```markdown
 ---
 id: a1b2c3d4
+title: i-learned-that-recursive-memory
 type: episodic
 created: 2024-01-15T10:30:00
 source: manual
@@ -68,17 +69,28 @@ tags:
   - learning
   - project
 links:
-  - "[[raw/9e8f7a6b]]"
+  - "[[raw/9e8f7a6b|i-learned-that-building]]"
 ---
 
-# Episodic Memory: a1b2c3d4
+# i-learned-that-recursive-memory
 
 **Summary:** I learned that recursive memory systems need layered storage.
 
-**Source:** [[raw/9e8f7a6b]]
+**Source:** [[raw/9e8f7a6b|i-learned-that-building]]
 
 [[Episodic Memory]] | [[Semantic Memory]] | [[Reflections]]
 ```
+
+### ID vs Title
+
+Every record has two identifiers:
+
+| Field | Example | Stable? |
+|---|---|---|
+| `id` | `a1b2c3d4` | **Yes** — permanent, used in filenames and cross-references |
+| `title` | `i-learned-that-recursive-memory` | Derived — for human readability only |
+
+Filenames are always `{id}.md`. Wikilinks use `[[subdir/id|title]]` format so they resolve correctly to the file while displaying readable text in Obsidian.
 
 Open the `vault/` folder as an Obsidian vault to get the graph view, backlinks, and tag explorer — but Obsidian is **not required**.  
 All files are plain Markdown readable in any editor.
@@ -109,7 +121,12 @@ The reflection engine reads all episodic and semantic memories and produces a ne
 4. What should become long-term core memory?
 5. What tasks or experiments are implied?
 
-The current engine is rule-based. The `reflect.py:_generate_reflection` function is designed as a single swap point — replace its body with an LLM call when you are ready for AI-generated analysis.
+The current engine is rule-based. The `reflect.py:_generate_reflection` function is the single LLM swap point — replace its body with an API call when you are ready for AI-generated analysis. The caller and storage path do not need to change.
+
+**Reflection safety limits** (configurable in `Config`):
+- Reviews episodic and semantic memories only — never prior reflections (prevents runaway loops)
+- Capped at 50 source memories per pass by default (`max_memories_per_reflection`)
+- Core memory suggestions are written inside the reflection note itself, clearly marked as requiring human review — never written to `vault/core/` automatically
 
 ---
 
@@ -119,12 +136,14 @@ Open-Claw is a **local memory framework**, not an autonomous uncontrolled agent.
 
 - All files are local and human-readable at all times
 - No action is taken without an explicit script invocation
-- Memory is additive — nothing is deleted automatically
-- Every memory traces back to its raw source
+- Memory is append-only — raw records are never overwritten; reflections always create new files
+- Every memory traces back to its raw source via `raw_ref` and `source_ids` fields
 - The reflection engine does not execute tasks — it only writes notes
+- **`vault/core/` is human-gated.** No automated process writes there. Reflections produce suggestions only, inside `vault/reflections/`.
 - Humans review, approve, and act on what the system learns
 
-This system supports transparency, reversibility, and full human oversight.
+This system supports transparency, reversibility, and full human oversight.  
+See `vault/core/PROTECTED.md` for the core memory protection contract.
 
 ---
 

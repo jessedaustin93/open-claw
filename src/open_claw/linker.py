@@ -4,11 +4,12 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from .config import Config
+from .memory_store import _wikilink
 
-_VAULT_DIR_MAP = {
-    "raw": "raw",
-    "episodic": "episodic",
-    "semantic": "semantic",
+_VAULT_DIR_MAP: Dict[str, str] = {
+    "raw":        "raw",
+    "episodic":   "episodic",
+    "semantic":   "semantic",
     "reflection": "reflections",
 }
 
@@ -17,6 +18,7 @@ def link_memories(config: Optional[Config] = None) -> Dict[str, List[str]]:
     """Add Obsidian wikilinks between notes that share at least one tag.
 
     Returns a map of memory_id -> [related_id, ...] for inspection.
+    Links use [[subdir/id|Readable Title]] format when titles are available.
     """
     if config is None:
         config = Config()
@@ -31,13 +33,13 @@ def link_memories(config: Optional[Config] = None) -> Dict[str, List[str]]:
             continue
 
         related = [
-            other["id"]
+            other
             for other in all_memories
             if other.get("id") != mem_id and mem_tags & set(other.get("tags", []))
         ]
 
         if related:
-            link_map[mem_id] = related
+            link_map[mem_id] = [r["id"] for r in related]
             _update_markdown_links(mem, related, config)
 
     return link_map
@@ -57,17 +59,28 @@ def _load_all_memories(config: Config) -> List[Dict]:
     return memories
 
 
-def _update_markdown_links(memory: Dict, related_ids: List[str], config: Config) -> None:
+def _update_markdown_links(memory: Dict, related_memories: List[Dict], config: Config) -> None:
+    """Append or replace the ## Related Memories section in a vault note.
+
+    Uses [[subdir/id|Title]] format when a title field is present on the
+    related memory, falling back to [[subdir/id]] otherwise.
+    """
     vault_dir_name = _VAULT_DIR_MAP.get(memory.get("type", "raw"), "raw")
     md_path = config.vault_path / vault_dir_name / f"{memory['id']}.md"
     if not md_path.exists():
         return
 
-    content = md_path.read_text(encoding="utf-8")
-    link_section = "\n\n## Related Memories\n" + "\n".join(
-        f"- [[{rid}]]" for rid in related_ids
-    )
+    link_lines = []
+    for r in related_memories:
+        rid   = r["id"]
+        rtype = r.get("type", "raw")
+        rdir  = _VAULT_DIR_MAP.get(rtype, rtype)
+        rtitle = r.get("title")
+        link_lines.append(f"- {_wikilink(rdir, rid, rtitle)}")
 
+    link_section = "\n\n## Related Memories\n" + "\n".join(link_lines)
+
+    content = md_path.read_text(encoding="utf-8")
     if "## Related Memories" in content:
         content = re.sub(
             r"\n\n## Related Memories\n.*",
