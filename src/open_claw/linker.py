@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from .config import Config
+from .exceptions import CoreMemoryProtectedError
 from .memory_store import _wikilink
 
 _VAULT_DIR_MAP: Dict[str, str] = {
@@ -11,6 +12,7 @@ _VAULT_DIR_MAP: Dict[str, str] = {
     "episodic":   "episodic",
     "semantic":   "semantic",
     "reflection": "reflections",
+    "core":       "core",       # present so paths resolve correctly before the guard fires
 }
 
 
@@ -64,9 +66,22 @@ def _update_markdown_links(memory: Dict, related_memories: List[Dict], config: C
 
     Uses [[subdir/id|Title]] format when a title field is present on the
     related memory, falling back to [[subdir/id]] otherwise.
+
+    vault/core/ files are always skipped when allow_core_modification is False —
+    core memory is human-gated and must not be modified by automated link passes.
     """
     vault_dir_name = _VAULT_DIR_MAP.get(memory.get("type", "raw"), "raw")
     md_path = config.vault_path / vault_dir_name / f"{memory['id']}.md"
+
+    # Core memory protection: skip any file that lives inside vault/core/
+    if not config.allow_core_modification:
+        core_dir = config.vault_path / "core"
+        try:
+            md_path.relative_to(core_dir)
+            return  # silently skip — vault/core/ is human-gated
+        except ValueError:
+            pass  # not inside core_dir — safe to proceed
+
     if not md_path.exists():
         return
 

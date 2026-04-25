@@ -321,3 +321,44 @@ def test_core_not_modified_by_reflect(cfg):
 
     after = set(core_dir.glob("*")) if core_dir.exists() else set()
     assert before == after, "Reflection must not touch vault/core/"
+
+
+def test_direct_core_write_raises_error(cfg):
+    """_write_markdown must raise CoreMemoryProtectedError when targeting vault/core/."""
+    from open_claw.exceptions import CoreMemoryProtectedError
+    from open_claw.memory_store import _write_markdown
+
+    core_path = cfg.vault_path / "core" / "should-not-exist.md"
+
+    with pytest.raises(CoreMemoryProtectedError):
+        _write_markdown(core_path, {"id": "x", "type": "core"}, "body", config=cfg)
+
+    assert not core_path.exists(), "File must not have been created before the error was raised"
+
+
+def test_linker_skips_core_vault_files(cfg):
+    """linker._update_markdown_links must leave vault/core/ files untouched."""
+    from open_claw.linker import _update_markdown_links
+
+    # Create a file in vault/core/ that has content which would be altered by link injection
+    core_dir = cfg.vault_path / "core"
+    core_dir.mkdir(parents=True, exist_ok=True)
+    core_md = core_dir / "protected-concept.md"
+    original = "# Protected Concept\n\nOriginal content — must not be touched by linker."
+    core_md.write_text(original, encoding="utf-8")
+
+    # Simulate a memory whose vault path resolves to vault/core/
+    # (type "core" -> _VAULT_DIR_MAP["core"] == "core")
+    fake_core_memory = {
+        "id": "protected-concept",
+        "type": "core",
+        "tags": ["project", "important"],
+    }
+    related = [{"id": "abc12345", "type": "raw", "title": "some-related-memory"}]
+
+    # This must skip the file silently rather than modifying it
+    _update_markdown_links(fake_core_memory, related, cfg)
+
+    assert core_md.read_text(encoding="utf-8") == original, (
+        "Linker must not modify files inside vault/core/"
+    )

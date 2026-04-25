@@ -65,8 +65,9 @@ Long-term stable identity, rules, and goals. **Manually curated only.**
 - **Written by:** Humans, after reviewing reflection suggestions
 - **Protected by:** `vault/core/PROTECTED.md` — explains the protection contract
 - **Automated processes:** May never write here. Reflections write suggestions into `vault/reflections/` only.
+- **Enforcement:** `_write_markdown` raises `CoreMemoryProtectedError` if any code attempts to write a file inside `vault/core/` while `config.allow_core_modification` is `False`. `linker.py` silently skips `vault/core/` files in the same condition. This is enforced in code, not just documented.
 
-See `vault/core/PROTECTED.md` for the full protection contract.
+See `vault/core/PROTECTED.md` for the human-readable protection contract.
 
 ### Reflections
 

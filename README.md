@@ -139,7 +139,7 @@ Open-Claw is a **local memory framework**, not an autonomous uncontrolled agent.
 - Memory is append-only — raw records are never overwritten; reflections always create new files
 - Every memory traces back to its raw source via `raw_ref` and `source_ids` fields
 - The reflection engine does not execute tasks — it only writes notes
-- **`vault/core/` is human-gated.** No automated process writes there. Reflections produce suggestions only, inside `vault/reflections/`.
+- **`vault/core/` is human-gated and enforced in code.** `_write_markdown` raises `CoreMemoryProtectedError` on any attempt to write there. The linker skips `vault/core/` files. Reflections produce suggestions only, inside `vault/reflections/`. Override with `config.allow_core_modification = True`.
 - Humans review, approve, and act on what the system learns
 
 This system supports transparency, reversibility, and full human oversight.  

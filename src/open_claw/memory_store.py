@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from .config import Config
+from .exceptions import CoreMemoryProtectedError
 
 # ---------------------------------------------------------------------------
 # Importance scoring
@@ -116,7 +117,28 @@ def _wikilink(vault_subdir: str, mem_id: str, title: Optional[str] = None) -> st
     return f"[[{path}|{title}]]" if title else f"[[{path}]]"
 
 
-def _write_markdown(path: Path, frontmatter: Dict, body: str) -> None:
+def _guard_core_path(path: Path, config: Optional[Config]) -> None:
+    """Raise CoreMemoryProtectedError if path targets vault/core/ and protection is active.
+
+    Called by _write_markdown before every disk write.  Passing config=None skips
+    the guard (only happens in tests that call _write_markdown directly without a
+    config — in all production code paths a Config is always supplied).
+    """
+    if config is None or config.allow_core_modification:
+        return
+    core_dir = config.vault_path / "core"
+    try:
+        path.relative_to(core_dir)
+        raise CoreMemoryProtectedError(
+            f"Write to '{path}' is blocked: vault/core/ is protected. "
+            "Set config.allow_core_modification = True to override."
+        )
+    except ValueError:
+        pass  # path is not inside core_dir — safe to proceed
+
+
+def _write_markdown(path: Path, frontmatter: Dict, body: str, config: Optional[Config] = None) -> None:
+    _guard_core_path(path, config)
     lines = ["---"]
     for key, value in frontmatter.items():
         if isinstance(value, list):
@@ -176,6 +198,7 @@ class MemoryStore:
                 f"{text}\n\n"
                 "[[Raw Memory]] | [[Episodic Memory]] | [[Core Memory]]"
             ),
+            config=self.config,
         )
         return memory
 
@@ -229,6 +252,7 @@ class MemoryStore:
                 f"**Source:** {raw_link}\n\n"
                 "[[Episodic Memory]] | [[Semantic Memory]] | [[Reflections]]"
             ),
+            config=self.config,
         )
         return memory
 
@@ -280,6 +304,7 @@ class MemoryStore:
                 f"**Description:** {description}\n\n"
                 "[[Semantic Memory]] | [[Core Memory]] | [[Episodic Memory]]"
             ),
+            config=self.config,
         )
         return memory
 
@@ -346,6 +371,7 @@ class MemoryStore:
                 + ", ".join(links)
                 + "\n\n[[Reflections]] | [[Episodic Memory]] | [[Semantic Memory]]"
             ),
+            config=self.config,
         )
         return memory
 
