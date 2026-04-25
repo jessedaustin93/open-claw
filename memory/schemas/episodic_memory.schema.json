@@ -1,0 +1,45 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Episodic Memory",
+  "description": "A summarized meaningful event derived from one or more raw memories.",
+  "type": "object",
+  "required": ["id", "type", "created", "source", "summary", "raw_ref", "importance", "tags", "links"],
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "type": {
+      "type": "string",
+      "const": "episodic"
+    },
+    "created": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "source": {
+      "type": "string"
+    },
+    "summary": {
+      "type": "string",
+      "description": "Human-readable summary of what happened or was learned"
+    },
+    "raw_ref": {
+      "type": "string",
+      "description": "ID of the source raw memory"
+    },
+    "importance": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "links": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "additionalProperties": false
+}

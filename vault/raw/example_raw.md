@@ -1,0 +1,18 @@
+---
+id: example_raw
+type: raw
+created: 2024-01-15T09:00:00
+source: manual
+importance: 0.75
+tags:
+  - learning
+  - concept
+  - project
+links: []
+---
+
+# Raw Memory: example_raw
+
+I learned that building a recursive memory system requires layered storage. The key concept is "Memory Layering" — raw inputs must always be preserved verbatim so they can be re-analyzed later with better tools. This is an important project goal: never delete the source, only add derived layers on top.
+
+[[Raw Memory]] | [[Episodic Memory]] | [[Core Memory]]

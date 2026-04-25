@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Reflection",
+  "description": "A recursive analysis of existing episodic and semantic memories.",
+  "type": "object",
+  "required": ["id", "type", "created", "source", "content", "source_ids", "tags", "links"],
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "type": {
+      "type": "string",
+      "const": "reflection"
+    },
+    "created": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "source": {
+      "type": "string",
+      "description": "Always 'reflection_engine' for automated reflections"
+    },
+    "content": {
+      "type": "string",
+      "description": "The full reflection text (Markdown)"
+    },
+    "source_ids": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "IDs of the memories this reflection analyzed"
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "links": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "additionalProperties": false
+}
