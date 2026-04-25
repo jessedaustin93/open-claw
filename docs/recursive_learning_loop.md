@@ -46,21 +46,42 @@ Each cycle through the loop increases the depth and quality of stored knowledge 
 
 **What happens:**
 
-1. All episodic and semantic memories are loaded.
-2. Tag frequencies are computed — revealing dominant themes.
-3. High-importance memories are identified.
-4. Reusable concepts from semantic memory are listed.
-5. A structured reflection note is generated asking:
-   - What was learned?
-   - What themes repeat?
-   - What seems most important?
-   - What should become long-term core memory?
-   - What tasks or experiments are implied?
-6. The reflection note is stored in `memory/reflections/` and `vault/reflections/`.
+1. All episodic and semantic memories are loaded (reflections excluded by default).
+2. Safety limits are applied: source cap, duplicate guard, low-value guard.
+3. Structured analysis is computed via `_analyse()`:
+   - Tag frequencies reveal dominant themes and repeated patterns.
+   - Uncertainty signals are detected across source text.
+   - Task phrases are extracted and listed as suggested actions.
+   - Core memory candidates are identified (suggestions only — never written automatically).
+   - A confidence score [0.0–1.0] is computed from source count, tag diversity, and uncertainty.
+4. A reflection note is generated with 7 required sections:
+   - **What Was Learned** — high-importance memories with readable wikilinks
+   - **Important Memories Reviewed** — all source memories with importance scores
+   - **New Patterns Noticed** — repeated tags and recurring themes
+   - **Conflicts or Uncertainty** — uncertainty signals found in source text
+   - **Suggested Tasks** — task phrases extracted from memories
+   - **Suggested Core Memory Updates** — human-review-required suggestions only
+   - **Reflection Quality** — confidence score and analysis notes
+5. The reflection note and its metadata are stored in `memory/reflections/` and `vault/reflections/`.
 
-**LLM swap point:** The function `reflect.py:_generate_reflection` returns a string of Markdown.  
-Replace it with an LLM call (`anthropic.Anthropic().messages.create(...)`) to get AI-generated analysis.  
-The rest of the pipeline does not change.
+**Duplicate guard:** If `config.skip_duplicate_reflections = True` (default), a pass whose source IDs exactly match a prior reflection is skipped — no redundant notes accumulate.
+
+**Low-value guard:** If the source count falls below `config.min_reflection_sources` (default: 1), the pass is skipped unless `config.allow_low_value_reflections = True`.
+
+**Reflection JSON metadata fields** (Layer 2, stored alongside core fields):
+
+| Field | Type | Description |
+|---|---|---|
+| `confidence` | float [0, 1] | Computed from source count, tag diversity, uncertainty |
+| `source_types` | dict | `{"episodic": N, "semantic": M}` |
+| `suggested_tasks` | list[str] | Extracted task phrases from source memories |
+| `suggested_core_updates` | list[str] | Core memory candidates (suggestions only) |
+| `detected_patterns` | list[str] | Repeated tags and high-importance clusters |
+| `uncertainty_notes` | list[str] | Memories containing uncertainty-signal words |
+| `generated_at` | ISO timestamp | When the analysis was computed |
+
+**LLM swap point:** `reflect.py:_generate_reflection(analysis: Dict) -> str` receives the full structured analysis dict and returns Markdown.  
+Replace the function body with an LLM call — the caller, the storage path, and the analysis structure do not change.
 
 ---
 

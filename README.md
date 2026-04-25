@@ -121,7 +121,9 @@ The reflection engine reads all episodic and semantic memories and produces a ne
 4. What should become long-term core memory?
 5. What tasks or experiments are implied?
 
-The current engine is rule-based. The `reflect.py:_generate_reflection` function is the single LLM swap point — replace its body with an API call when you are ready for AI-generated analysis. The caller and storage path do not need to change.
+The current engine is rule-based. The `reflect.py:_generate_reflection(analysis)` function is the single LLM swap point — replace its body with an API call when you are ready for AI-generated analysis. The caller and storage path do not need to change.
+
+**Layer 2 — Reflection Quality** (implemented): Each reflection pass now runs a structured analysis (`_analyse()`) before rendering, producing a 7-section note and persisting rich metadata in the JSON record: `confidence`, `source_types`, `suggested_tasks`, `suggested_core_updates`, `detected_patterns`, `uncertainty_notes`, `generated_at`. Duplicate passes (same source IDs as a prior reflection) are skipped by default (`skip_duplicate_reflections = True`). Passes with too few sources are skipped unless `allow_low_value_reflections = True`.
 
 **Reflection safety limits** (configurable in `Config`):
 - Reviews episodic and semantic memories only — never prior reflections (prevents runaway loops)

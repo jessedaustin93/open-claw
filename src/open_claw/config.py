@@ -15,9 +15,16 @@ class Config:
         self.max_memories_per_reflection: int = 50
         # Reflection safety: reflections never reflect on prior reflections by default
         self.allow_reflection_on_reflections: bool = False
-        # Core memory protection: ingestion/reflection never write to vault/core/
-        # Setting this True requires an explicit human decision — it is NOT checked in code yet.
+        # Core memory protection: ingestion/reflection never write to vault/core/.
+        # Setting this True requires an explicit human decision.
         self.allow_core_modification: bool = False
+        # Layer 2 — reflection quality controls
+        # Minimum number of source memories required to produce a reflection.
+        self.min_reflection_sources: int = 1
+        # When True, skip a reflect() pass whose source IDs exactly match a prior reflection.
+        self.skip_duplicate_reflections: bool = True
+        # When False (default), skip reflect() passes that fall below min_reflection_sources.
+        self.allow_low_value_reflections: bool = False
 
     def ensure_dirs(self):
         for subdir in ["core", "raw", "episodic", "semantic", "reflections", "agents", "tasks"]:

@@ -316,6 +316,7 @@ class MemoryStore:
         source_ids: List[str],
         tags: List[str],
         source_titles: Optional[Dict[str, Tuple[str, str]]] = None,
+        metadata: Optional[Dict] = None,
     ) -> Dict:
         """Append a new reflection note.
 
@@ -323,8 +324,9 @@ class MemoryStore:
         overwritten or modified.
 
         source_titles: optional {id: (vault_subdir, display_title)} mapping
-                       used to produce readable Obsidian wikilinks.
-                       Falls back to bare [[id]] when absent.
+                       for readable Obsidian wikilinks.
+        metadata:      optional dict of Layer 2 fields (confidence, source_types,
+                       suggested_tasks, etc.) spread directly into the JSON record.
         """
         mem_id = _generate_id()
         now = datetime.utcnow().isoformat()
@@ -348,6 +350,7 @@ class MemoryStore:
             "source_ids": source_ids,
             "tags": tags,
             "links": links,
+            **(metadata or {}),
         }
 
         (self.config.memory_path / "reflections" / f"{mem_id}.json").write_text(

@@ -276,6 +276,7 @@ def test_reflection_references_source_ids(cfg):
 def test_multiple_reflections_both_preserved(cfg):
     """Calling reflect() twice must create two distinct files — no overwriting."""
     ingest("I learned an important project goal must be remembered.", config=cfg)
+    cfg.skip_duplicate_reflections = False  # Layer 2: allow same-source repeat
 
     r1 = reflect(config=cfg)
     r2 = reflect(config=cfg)
@@ -361,4 +362,187 @@ def test_linker_skips_core_vault_files(cfg):
 
     assert core_md.read_text(encoding="utf-8") == original, (
         "Linker must not modify files inside vault/core/"
+    )
+
+
+# ═══════════════════════════════════════ Layer 2 — reflection quality ══════
+
+def test_reflection_has_structured_sections(cfg):
+    """Reflection Markdown must contain all 7 required section headers."""
+    ingest("I learned an important project goal must be remembered.", config=cfg)
+    result = reflect(config=cfg)
+
+    assert result["reflection"] is not None, "Reflection should be created"
+    ref_id = result["reflection"]["id"]
+    md_path = cfg.vault_path / "reflections" / f"{ref_id}.md"
+    content = md_path.read_text()
+
+    required_sections = [
+        "### What Was Learned",
+        "### Important Memories Reviewed",
+        "### New Patterns Noticed",
+        "### Conflicts or Uncertainty",
+        "### Suggested Tasks",
+        "### Suggested Core Memory Updates",
+        "### Reflection Quality",
+    ]
+    for section in required_sections:
+        assert section in content, f"Missing section: {section}"
+
+
+def test_reflection_json_has_metadata_fields(cfg):
+    """Reflection JSON must include Layer 2 metadata fields."""
+    ingest("I learned an important project goal must be remembered.", config=cfg)
+    result = reflect(config=cfg)
+
+    assert result["reflection"] is not None
+    ref = result["reflection"]
+
+    for field in ("confidence", "source_types", "suggested_tasks",
+                  "suggested_core_updates", "detected_patterns",
+                  "uncertainty_notes", "generated_at"):
+        assert field in ref, f"Reflection JSON missing field: {field}"
+
+    assert isinstance(ref["confidence"], float), "confidence must be a float"
+    assert isinstance(ref["source_types"], dict), "source_types must be a dict"
+    assert isinstance(ref["suggested_tasks"], list)
+    assert isinstance(ref["suggested_core_updates"], list)
+    assert isinstance(ref["detected_patterns"], list)
+    assert isinstance(ref["uncertainty_notes"], list)
+
+
+def test_task_extraction(cfg):
+    """Text containing task phrases should appear in suggested_tasks."""
+    ingest(
+        "I learned that we need to build a local memory index and should review "
+        "the episodic layer for important project patterns.",
+        config=cfg,
+    )
+    result = reflect(config=cfg)
+
+    assert result["reflection"] is not None
+    tasks = result["reflection"]["suggested_tasks"]
+    assert len(tasks) > 0, "Task-phrase text should produce at least one suggested task"
+
+
+def test_suggested_core_updates_not_written_to_vault_core(cfg):
+    """Suggested core memory updates must appear in the reflection note only — never in vault/core/."""
+    ingest("I learned an important project goal must be remembered.", config=cfg)
+
+    core_dir = cfg.vault_path / "core"
+    before = set(core_dir.glob("*")) if core_dir.exists() else set()
+
+    reflect(config=cfg)
+
+    after = set(core_dir.glob("*")) if core_dir.exists() else set()
+    assert before == after, "Reflection must not write any file to vault/core/"
+
+
+def test_duplicate_reflection_skipped(cfg):
+    """Second reflect() on the same source IDs must be skipped when skip_duplicate_reflections=True."""
+    ingest("I learned an important project goal must be remembered.", config=cfg)
+    cfg.skip_duplicate_reflections = True
+
+    r1 = reflect(config=cfg)
+    r2 = reflect(config=cfg)
+
+    assert r1["reflection"] is not None, "First reflection should be created"
+    assert r2["reflection"] is None, "Duplicate reflection should be skipped"
+    assert "Duplicate" in r2["message"]
+
+
+def test_duplicate_reflection_allowed_when_config_off(cfg):
+    """Second reflect() must succeed when skip_duplicate_reflections=False."""
+    ingest("I learned an important project goal must be remembered.", config=cfg)
+    cfg.skip_duplicate_reflections = False
+
+    r1 = reflect(config=cfg)
+    r2 = reflect(config=cfg)
+
+    assert r1["reflection"] is not None
+    assert r2["reflection"] is not None
+    assert r1["reflection"]["id"] != r2["reflection"]["id"], "Each pass must create a unique ID"
+
+
+def test_confidence_score_in_bounds(cfg):
+    """Confidence must always be a float in [0.0, 1.0]."""
+    ingest("I learned an important project goal must be remembered.", config=cfg)
+    result = reflect(config=cfg)
+
+    assert result["reflection"] is not None
+    confidence = result["reflection"]["confidence"]
+    assert 0.0 <= confidence <= 1.0, f"Confidence out of bounds: {confidence}"
+
+
+def test_confidence_higher_with_more_sources(cfg):
+    """More diverse source memories should yield a higher confidence score."""
+    # Single source
+    cfg_single = cfg
+    ingest("I learned an important project goal.", config=cfg_single)
+    r_single = reflect(config=cfg_single)
+    conf_single = r_single["reflection"]["confidence"] if r_single["reflection"] else 0.0
+
+    # Multiple sources — fresh config in a new tmp directory is not needed;
+    # just ingest more varied content so tag diversity increases.
+    import tempfile
+    from pathlib import Path
+    from open_claw import Config
+    tmp2 = Path(tempfile.mkdtemp())
+    cfg_many = Config(base_path=tmp2)
+    for text in [
+        "I learned an important project goal must be remembered.",
+        "This is a critical key insight about learning patterns.",
+        "I discovered a bug in the error handling code.",
+        "The concept of recursive memory is an important idea to remember.",
+        "I realized this project goal needs to be documented.",
+    ]:
+        ingest(text, config=cfg_many)
+    r_many = reflect(config=cfg_many)
+    conf_many = r_many["reflection"]["confidence"] if r_many["reflection"] else 0.0
+
+    assert conf_many >= conf_single, (
+        f"More sources should yield >= confidence: single={conf_single}, many={conf_many}"
+    )
+
+
+def test_reflection_excludes_prior_reflections_by_default(cfg):
+    """Prior reflection IDs must not appear in source_ids of a new reflection."""
+    ingest("I learned an important project goal must be remembered.", config=cfg)
+    cfg.skip_duplicate_reflections = False
+
+    r1 = reflect(config=cfg)
+    r2 = reflect(config=cfg)
+
+    assert r1["reflection"] is not None
+    assert r2["reflection"] is not None
+
+    r1_id = r1["reflection"]["id"]
+    assert r1_id not in r2["reflection"]["source_ids"], (
+        "Prior reflection ID must not appear in source_ids when "
+        "allow_reflection_on_reflections is False"
+    )
+
+
+def test_low_source_reflection_skipped(cfg):
+    """reflect() must be skipped when source count < min_reflection_sources."""
+    ingest("I learned an important project goal must be remembered.", config=cfg)
+    cfg.min_reflection_sources = 10  # require 10 sources — we only have 1-2
+    cfg.allow_low_value_reflections = False
+
+    result = reflect(config=cfg)
+
+    assert result["reflection"] is None, "Should be skipped: too few sources"
+    assert "Too few" in result["message"]
+
+
+def test_low_source_allowed_with_config(cfg):
+    """reflect() must succeed when allow_low_value_reflections=True even below min threshold."""
+    ingest("I learned an important project goal must be remembered.", config=cfg)
+    cfg.min_reflection_sources = 10  # above actual source count
+    cfg.allow_low_value_reflections = True
+
+    result = reflect(config=cfg)
+
+    assert result["reflection"] is not None, (
+        "Reflection should be created when allow_low_value_reflections=True"
     )
