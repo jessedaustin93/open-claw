@@ -1,0 +1,46 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Semantic Memory",
+  "description": "A reusable concept, fact, pattern, or lesson extracted from episodic memory.",
+  "type": "object",
+  "required": ["id", "type", "created", "source", "concept", "description", "importance", "tags", "links"],
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "type": {
+      "type": "string",
+      "const": "semantic"
+    },
+    "created": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "source": {
+      "type": "string"
+    },
+    "concept": {
+      "type": "string",
+      "description": "The name of the reusable concept or pattern"
+    },
+    "description": {
+      "type": "string",
+      "description": "What this concept means and why it matters"
+    },
+    "importance": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "links": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Links to related episodic or raw memories"
+    }
+  },
+  "additionalProperties": false
+}

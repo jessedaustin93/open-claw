@@ -1,0 +1,10 @@
+{
+  "id": "example_reflection",
+  "type": "reflection",
+  "created": "2024-01-15T10:00:00",
+  "source": "reflection_engine",
+  "content": "## Recursive Reflection — 2024-01-15 10:00 UTC\n\nReviewing 1 episodic memory and 1 semantic memory.\n\n### Dominant Themes\n\n- **learning** (appears 2 times)\n- **concept** (appears 2 times)\n- **project** (appears 1 time)\n\n### High-Importance Memories\n\n- [[example_episodic]] I learned that building a recursive memory system requires layered storage.\n- [[example_semantic]] Concept: Memory Layering\n\n### Reusable Concepts Identified\n\n- **Memory Layering**: Raw inputs must always be preserved verbatim so they can be re-analyzed with better tools\n\n### Implied Tasks\n\n- Review memories tagged `project` for actionable follow-up.",
+  "source_ids": ["example_episodic", "example_semantic"],
+  "tags": ["learning", "concept", "project", "pattern"],
+  "links": ["[[example_episodic]]", "[[example_semantic]]"]
+}

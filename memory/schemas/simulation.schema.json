@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Simulation",
+  "description": "A record of a simulated action. No real system commands are executed.",
+  "type": "object",
+  "required": ["id", "task_id", "proposed_action", "expected_outcome", "required_human_approval", "created_at"],
+  "properties": {
+    "id":                       { "type": "string" },
+    "task_id":                  { "type": "string" },
+    "task_title":               { "type": "string" },
+    "proposed_action":          { "type": "string", "description": "What would be done — description only, never executed" },
+    "expected_outcome":         { "type": "string" },
+    "risks": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Risk signals detected in the task description"
+    },
+    "required_human_approval":  { "type": "boolean", "description": "Always true in the default Config" },
+    "created_at":               { "type": "string", "format": "date-time" },
+    "source_links": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Obsidian wikilinks to the source task"
+    }
+  }
+}

@@ -1,24 +1,46 @@
+# Python
 __pycache__/
 *.py[cod]
 *.egg-info/
 dist/
 build/
+.eggs/
+*.egg
+
+# Virtual environments
 .venv/
 venv/
+env/
+
+# Testing
 .pytest_cache/
-*.log
+.coverage
+htmlcov/
 
-# Memory data — do not commit live vault/memory data by default
-memory/raw/
-memory/episodic/
-memory/semantic/
-memory/reflections/
-vault/raw/
-vault/episodic/
-vault/semantic/
-vault/reflections/
-vault/agents/
-vault/tasks/
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+Thumbs.db
 
-# Core memory IS committed if you manually add files there
-!vault/core/
+# Open-Claw runtime data (keep schemas; ignore generated memory files)
+memory/raw/*.json
+memory/episodic/*.json
+memory/semantic/*.json
+memory/reflections/*.json
+vault/raw/*.md
+vault/episodic/*.md
+vault/semantic/*.md
+vault/reflections/*.md
+
+# But keep example seed data
+!memory/raw/example_*.json
+!memory/episodic/example_*.json
+!memory/semantic/example_*.json
+!memory/reflections/example_*.json
+!vault/raw/example_*.md
+!vault/episodic/example_*.md
+!vault/semantic/example_*.md
+!vault/reflections/example_*.md
