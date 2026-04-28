@@ -1,12 +1,13 @@
 import json
 import re
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from .config import Config
 from .exceptions import CoreMemoryProtectedError
+from .time_utils import utc_now_iso
 
 # ---------------------------------------------------------------------------
 # Importance scoring
@@ -161,7 +162,7 @@ class MemoryStore:
     def store_raw(self, text: str, source: str = "manual") -> Dict:
         """Write a verbatim raw memory. Never called again on the same record."""
         mem_id = _generate_id()
-        now = datetime.utcnow().isoformat()
+        now = utc_now_iso()
         importance = _score_importance(text)
         tags = _extract_tags(text)
         title = _make_title(text)
@@ -214,7 +215,7 @@ class MemoryStore:
         raw_title: Optional[str] = None,
     ) -> Dict:
         mem_id = _generate_id()
-        now = datetime.utcnow().isoformat()
+        now = utc_now_iso()
         title = _make_title(summary)
         raw_link = _wikilink("raw", raw_id, raw_title)
 
@@ -267,7 +268,7 @@ class MemoryStore:
         source: str,
     ) -> Dict:
         mem_id = _generate_id()
-        now = datetime.utcnow().isoformat()
+        now = utc_now_iso()
         title = _make_title(concept)
 
         memory = {
@@ -329,8 +330,8 @@ class MemoryStore:
                        suggested_tasks, etc.) spread directly into the JSON record.
         """
         mem_id = _generate_id()
-        now = datetime.utcnow().isoformat()
-        title = f"reflection-{datetime.utcnow().strftime('%Y%m%d-%H%M')}"
+        now = utc_now_iso()
+        title = f"reflection-{datetime.now(UTC).strftime('%Y%m%d-%H%M')}"
 
         links: List[str] = []
         for sid in source_ids:

@@ -9,11 +9,11 @@ No subprocess, os.system, or execution primitive is imported or called.
 """
 import json
 import re
-from datetime import datetime
 from typing import Dict, List, Optional
 
 from .config import Config
 from .memory_store import _generate_id, _make_title, _wikilink
+from .time_utils import local_date_time_string, utc_now_iso
 
 
 def _jaccard(a: str, b: str) -> float:
@@ -70,7 +70,7 @@ class TaskStore:
             return None
 
         task_id = _generate_id()
-        now = datetime.utcnow().isoformat()
+        now = utc_now_iso()
         title = _make_title(description)
         source_link = _wikilink(
             "reflections", source_reflection_id, source_reflection_title
@@ -157,6 +157,8 @@ class TaskStore:
             fm_lines.append(f"  - {lnk}")
         fm_lines.append("---")
 
+        display_tz = self.config.display_timezone
+        local_ts = local_date_time_string(task["created_at"], display_tz)
         src_link = _wikilink(
             "reflections",
             task["source_reflection_id"],
@@ -164,6 +166,7 @@ class TaskStore:
         )
         body = (
             f"# {task['title']}\n\n"
+            f"**Created:** {local_ts}\n\n"
             f"**Description:** {task['description']}\n\n"
             f"**Status:** `{task['status']}`\n\n"
             f"**Priority:** {task['priority']}  |  "

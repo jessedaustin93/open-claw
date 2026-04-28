@@ -1,9 +1,9 @@
-from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 
 from .config import Config
 from .memory_store import MemoryStore, _wikilink
 from .tasks import create_tasks_from_reflection
+from .time_utils import local_now_string, utc_now_iso
 
 # Vault subdirectory for each memory type (used when building source links)
 _TYPE_SUBDIR: Dict[str, str] = {
@@ -92,6 +92,7 @@ def reflect(config: Optional[Config] = None) -> Dict:
     all_tags = list({tag for m in episodic + semantic for tag in m.get("tags", [])})
 
     analysis = _analyse(episodic, semantic)
+    analysis["display_tz"] = config.display_timezone
 
     content = _generate_reflection(analysis)
 
@@ -164,7 +165,7 @@ def _analyse(episodic: List[Dict], semantic: List[Dict]) -> Dict:
         "suggested_tasks":       suggested_tasks,
         "suggested_core_updates": suggested_core_updates,
         "confidence":            confidence,
-        "generated_at":          datetime.utcnow().isoformat(),
+        "generated_at":          utc_now_iso(),
     }
 
 
@@ -258,9 +259,10 @@ def _generate_reflection(analysis: Dict) -> str:
     """
     ep_count = analysis["source_types"].get("episodic", 0)
     sem_count = analysis["source_types"].get("semantic", 0)
+    display_tz = analysis.get("display_tz", "America/New_York")
 
     lines = [
-        f"## Recursive Reflection — {datetime.utcnow().strftime('%Y-%m-%d %H:%M')} UTC",
+        f"## Recursive Reflection — {local_now_string(display_tz)}",
         "",
         f"Reviewing {ep_count} episodic and {sem_count} semantic memories.",
         "",

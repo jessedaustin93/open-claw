@@ -165,6 +165,40 @@ Execution requires explicit per-action human approval, sandboxing, and rollback 
 
 ---
 
+## Timestamps and Timezones
+
+Open-Claw uses a two-layer timestamp strategy to avoid timezone bugs while keeping notes readable:
+
+| Location | Format | Example |
+|---|---|---|
+| JSON records (`created`, `created_at`, `generated_at`) | UTC ISO-8601 with `+00:00` offset | `2026-04-28T21:07:13.050967+00:00` |
+| Markdown notes and CLI output | Local time (configurable) | `2026-04-28 5:07 PM EDT` |
+
+**Default display timezone:** `America/New_York` — change it in `Config.display_timezone`.
+
+```python
+from open_claw import Config
+config = Config()
+config.display_timezone = "Europe/London"   # or any IANA name
+```
+
+All helpers live in `src/open_claw/time_utils.py`:
+
+| Function | Returns |
+|---|---|
+| `utc_now_iso()` | `'2026-04-28T21:07:13+00:00'` |
+| `local_time_string(ts, tz)` | `'5:07 PM EDT'` |
+| `local_date_time_string(ts, tz)` | `'2026-04-28 5:07 PM EDT'` |
+| `local_now_string(tz)` | current local date + time |
+
+Timezone conversion uses `zoneinfo` (stdlib, Python 3.9+). On systems without the OS timezone database, install `tzdata`:
+
+```bash
+pip install tzdata
+```
+
+---
+
 ## Safety and Control
 
 Open-Claw is a **local memory framework**, not an autonomous uncontrolled agent.
@@ -276,7 +310,7 @@ open-claw/
     run_reflection.py # Trigger a reflection pass
     search_memory.py  # Search across all memory layers
     manage_tasks.py   # Layer 3: tasks | decide | simulate | loop
-  tests/              # pytest suite (54 tests across Layers 1–3)
+  tests/              # pytest suite (66 tests across Layers 1–3 + timestamps)
   vault/              # Human-readable Markdown notes (open as Obsidian vault)
   memory/             # Structured JSON memory store + schemas
   docs/               # Architecture and design documentation

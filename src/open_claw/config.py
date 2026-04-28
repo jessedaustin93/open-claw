@@ -34,6 +34,8 @@ class Config:
         self.duplicate_task_similarity_threshold: float = 0.8
         # When True (default), every simulation record is flagged for human approval.
         self.require_human_approval_for_simulation: bool = True
+        # Timestamps — UTC is stored in JSON; this timezone is used for Markdown/CLI display.
+        self.display_timezone: str = "America/New_York"
 
     def ensure_dirs(self):
         for subdir in ["core", "raw", "episodic", "semantic", "reflections", "agents", "tasks"]:

@@ -7,12 +7,12 @@ vault/core/ is never touched.
 No subprocess, os.system, or execution primitive is imported or called.
 """
 import json
-from datetime import datetime
 from typing import Dict, List, Optional
 
 from .config import Config
 from .memory_store import _generate_id, _wikilink
 from .tasks import TaskStore
+from .time_utils import local_date_time_string, utc_now_iso
 
 
 class DecisionStore:
@@ -33,7 +33,7 @@ class DecisionStore:
         alternatives: List[Dict],
     ) -> Dict:
         dec_id = _generate_id()
-        now = datetime.utcnow().isoformat()
+        now = utc_now_iso()
         task_link = _wikilink(
             "tasks", selected_task["id"], selected_task.get("title")
         )
@@ -97,8 +97,10 @@ class DecisionStore:
             decision["selected_task_id"],
             decision["selected_task_title"],
         )
+        display_tz = self.config.display_timezone
+        local_ts = local_date_time_string(decision["created_at"], display_tz)
         body = (
-            f"# Decision — {decision['created_at'][:10]}\n\n"
+            f"# Decision — {local_ts}\n\n"
             f"**Selected Task:** {task_link}\n\n"
             f"**Reason:** {decision['reason']}\n\n"
             f"**Confidence:** {decision['confidence']}\n\n"

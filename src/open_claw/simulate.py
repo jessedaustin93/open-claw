@@ -15,12 +15,12 @@ in the shipped Config — changing it does nothing because no execution path
 exists to enable).
 """
 import json
-from datetime import datetime
 from typing import Dict, List, Optional
 
 from .config import Config
 from .memory_store import _generate_id, _wikilink
 from .tasks import TaskStore
+from .time_utils import local_date_time_string, utc_now_iso
 
 _DESTRUCTIVE_SIGNALS = ("delete", "remove", "drop", "clear", "wipe", "purge")
 _EXTERNAL_SIGNALS    = ("deploy", "push", "publish", "release", "ship")
@@ -79,9 +79,12 @@ class SimulationStore:
             "\n".join(f"- {r}" for r in sim.get("risks", []))
             or "- None identified"
         )
+        display_tz = self.config.display_timezone
+        local_ts = local_date_time_string(sim["created_at"], display_tz)
         task_link = _wikilink("tasks", sim["task_id"], sim["task_title"])
         body = (
             f"# Simulation — {sim['task_title']}\n\n"
+            f"**Created:** {local_ts}\n\n"
             f"**Task:** {task_link}\n\n"
             f"**Proposed Action:** {sim['proposed_action']}\n\n"
             f"**Expected Outcome:** {sim['expected_outcome']}\n\n"
@@ -120,7 +123,7 @@ def simulate_action(task: Dict, config: Optional[Config] = None) -> Dict:
     task_store = TaskStore(config)
 
     sim_id   = _generate_id()
-    now      = datetime.utcnow().isoformat()
+    now      = utc_now_iso()
     desc     = task.get("description", "")
     title    = task.get("title", task.get("id", "unknown"))
     task_link = _wikilink("tasks", task["id"], title)
