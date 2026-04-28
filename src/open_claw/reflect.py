@@ -3,6 +3,7 @@ from typing import Dict, List, Optional, Tuple
 
 from .config import Config
 from .memory_store import MemoryStore, _wikilink
+from .tasks import create_tasks_from_reflection
 
 # Vault subdirectory for each memory type (used when building source links)
 _TYPE_SUBDIR: Dict[str, str] = {
@@ -112,7 +113,14 @@ def reflect(config: Optional[Config] = None) -> Dict:
         metadata=metadata,
     )
 
-    return {"reflection": reflection, "message": "Reflection created."}
+    # Layer 3: convert suggested_tasks from this reflection into stored task objects.
+    tasks_created = create_tasks_from_reflection(reflection, config)
+
+    return {
+        "reflection": reflection,
+        "message": "Reflection created.",
+        "tasks_created": tasks_created,
+    }
 
 
 # ---------------------------------------------------------------------------

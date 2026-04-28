@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Decision",
+  "description": "An append-only record of a task selection by the decision engine.",
+  "type": "object",
+  "required": ["id", "selected_task_id", "reason", "created_at", "confidence"],
+  "properties": {
+    "id":                    { "type": "string" },
+    "selected_task_id":      { "type": "string" },
+    "selected_task_title":   { "type": "string" },
+    "reason":                { "type": "string", "description": "Human-readable explanation of why this task was selected" },
+    "created_at":            { "type": "string", "format": "date-time" },
+    "confidence":            { "type": "number", "minimum": 0, "maximum": 1 },
+    "alternatives_considered": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Titles of tasks that were considered but not selected"
+    },
+    "source_links": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Obsidian wikilinks to the selected task"
+    }
+  }
+}

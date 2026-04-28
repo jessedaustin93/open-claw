@@ -45,7 +45,9 @@ Episodic and semantic memories are derived from raws, not replacements for them.
 | **Semantic** | `vault/semantic/`, `memory/semantic/` | Reusable concepts, rules, and patterns |
 | **Core** | `vault/core/` | Stable identity, long-term rules, goals |
 | **Reflections** | `vault/reflections/`, `memory/reflections/` | Recursive analysis of prior memories |
-| **Tasks** | `vault/tasks/` | Implied future actions and experiments |
+| **Tasks** | `vault/tasks/`, `memory/tasks/` | Structured task objects derived from reflection suggested_tasks |
+| **Decisions** | `vault/decisions/`, `memory/decisions/` | Append-only decision records from the selection engine |
+| **Simulations** | `vault/simulations/`, `memory/simulations/` | Proposed-action records — never executed automatically |
 | **Agents** | `vault/agents/` | Agent-specific configurations and notes |
 
 ---
@@ -132,15 +134,47 @@ The current engine is rule-based. The `reflect.py:_generate_reflection(analysis)
 
 ---
 
+## Layer 3 — Decision and Action Simulation
+
+**Layer 3 — Decision and Action Simulation** (implemented): Extends the reflection loop into structured propose → decide → simulate, while remaining fully local and human-gated.
+
+### How Tasks Flow from Reflection
+
+Every `reflect()` call automatically converts its `suggested_tasks` list into stored task objects in `memory/tasks/` and `vault/tasks/`. Near-duplicate tasks (Jaccard word-overlap ≥ 0.8) are silently blocked.
+
+### Decision Engine
+
+`select_next_task()` scores all pending tasks by `priority × 0.5 + confidence × 0.3`, selects the highest scorer, marks it `selected`, and writes an append-only decision record to `memory/decisions/`.
+
+### Action Simulation
+
+`simulate_action(task)` produces a structured simulation record describing what *would* happen — proposed action, expected outcome, and risk signals — and stores it in `memory/simulations/` and `vault/simulations/`. **No real commands are executed.** `subprocess`, `os.system`, and every execution primitive are absent from `simulate.py` by design. The `enable_real_actions` config flag is `False` permanently — there is no code path that enables execution.
+
+### CLI
+
+```bash
+python scripts/manage_tasks.py tasks     # list pending tasks
+python scripts/manage_tasks.py decide    # select best task, write decision record
+python scripts/manage_tasks.py simulate  # simulate selected task
+python scripts/manage_tasks.py loop      # decide + simulate once
+```
+
+### Why Simulation Instead of Execution
+
+Execution requires explicit per-action human approval, sandboxing, and rollback mechanisms. Layer 3 builds the planning substrate — structured task objects, scored decisions, and detailed simulation records — so that when real tool use is added, the reasoning layer already exists and is fully auditable.
+
+---
+
 ## Safety and Control
 
 Open-Claw is a **local memory framework**, not an autonomous uncontrolled agent.
 
 - All files are local and human-readable at all times
 - No action is taken without an explicit script invocation
-- Memory is append-only — raw records are never overwritten; reflections always create new files
+- Memory is append-only — raw records are never overwritten; reflections and decisions always create new files
 - Every memory traces back to its raw source via `raw_ref` and `source_ids` fields
-- The reflection engine does not execute tasks — it only writes notes
+- The reflection engine does not execute tasks — it only writes notes and proposed task objects
+- The simulation engine writes files only — no subprocess, os.system, or network calls exist in `simulate.py`
 - **`vault/core/` is human-gated and enforced in code.** `_write_markdown` raises `CoreMemoryProtectedError` on any attempt to write there. The linker skips `vault/core/` files. Reflections produce suggestions only, inside `vault/reflections/`. Override with `config.allow_core_modification = True`.
 - Humans review, approve, and act on what the system learns
 
@@ -230,11 +264,19 @@ open-claw/
     config.py         # Paths and tunable parameters
     memory_store.py   # Read/write memories (JSON + Markdown)
     ingest.py         # Promotion logic: raw -> episodic -> semantic
-    reflect.py        # Reflection engine
+    reflect.py        # Reflection engine (Layer 2) — triggers task creation
+    tasks.py          # Task storage layer (Layer 3)
+    decision.py       # Decision engine — select_next_task() (Layer 3)
+    simulate.py       # Action simulation — simulate_action() (Layer 3, no execution)
     search.py         # Keyword search (vector-ready interface)
     linker.py         # Automatic Obsidian wikilink generation
+    exceptions.py     # CoreMemoryProtectedError
   scripts/            # CLI entry points
-  tests/              # pytest suite
+    ingest_text.py    # Ingest text from CLI / file / stdin
+    run_reflection.py # Trigger a reflection pass
+    search_memory.py  # Search across all memory layers
+    manage_tasks.py   # Layer 3: tasks | decide | simulate | loop
+  tests/              # pytest suite (54 tests across Layers 1–3)
   vault/              # Human-readable Markdown notes (open as Obsidian vault)
   memory/             # Structured JSON memory store + schemas
   docs/               # Architecture and design documentation

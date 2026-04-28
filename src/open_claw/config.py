@@ -25,6 +25,15 @@ class Config:
         self.skip_duplicate_reflections: bool = True
         # When False (default), skip reflect() passes that fall below min_reflection_sources.
         self.allow_low_value_reflections: bool = False
+        # Layer 3 — decision and action simulation
+        # Safety lock: real execution is permanently disabled. Never set to True.
+        self.enable_real_actions: bool = False
+        # Maximum number of pending tasks before new task creation is blocked.
+        self.max_pending_tasks: int = 100
+        # Jaccard similarity threshold above which a new task is considered a duplicate.
+        self.duplicate_task_similarity_threshold: float = 0.8
+        # When True (default), every simulation record is flagged for human approval.
+        self.require_human_approval_for_simulation: bool = True
 
     def ensure_dirs(self):
         for subdir in ["core", "raw", "episodic", "semantic", "reflections", "agents", "tasks"]:
