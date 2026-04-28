@@ -1,0 +1,24 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+.pytest_cache/
+*.log
+
+# Memory data — do not commit live vault/memory data by default
+memory/raw/
+memory/episodic/
+memory/semantic/
+memory/reflections/
+vault/raw/
+vault/episodic/
+vault/semantic/
+vault/reflections/
+vault/agents/
+vault/tasks/
+
+# Core memory IS committed if you manually add files there
+!vault/core/
