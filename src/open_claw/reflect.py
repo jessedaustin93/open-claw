@@ -1,8 +1,7 @@
-from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 
 from .config import Config
-from .memory_store import MemoryStore, _wikilink
+from .memory_store import MemoryStore, _est_display, _utc_now_iso, _wikilink
 from .tasks import create_tasks_from_reflection
 
 # Vault subdirectory for each memory type (used when building source links)
@@ -164,7 +163,7 @@ def _analyse(episodic: List[Dict], semantic: List[Dict]) -> Dict:
         "suggested_tasks":       suggested_tasks,
         "suggested_core_updates": suggested_core_updates,
         "confidence":            confidence,
-        "generated_at":          datetime.utcnow().isoformat(),
+        "generated_at":          _utc_now_iso(),
     }
 
 
@@ -260,7 +259,7 @@ def _generate_reflection(analysis: Dict) -> str:
     sem_count = analysis["source_types"].get("semantic", 0)
 
     lines = [
-        f"## Recursive Reflection — {datetime.utcnow().strftime('%Y-%m-%d %H:%M')} UTC",
+        f"## Recursive Reflection — {_est_display()}",
         "",
         f"Reviewing {ep_count} episodic and {sem_count} semantic memories.",
         "",

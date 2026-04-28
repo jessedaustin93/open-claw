@@ -15,11 +15,10 @@ in the shipped Config — changing it does nothing because no execution path
 exists to enable).
 """
 import json
-from datetime import datetime
 from typing import Dict, List, Optional
 
 from .config import Config
-from .memory_store import _generate_id, _wikilink
+from .memory_store import _generate_id, _utc_now_iso, _wikilink
 from .tasks import TaskStore
 
 _DESTRUCTIVE_SIGNALS = ("delete", "remove", "drop", "clear", "wipe", "purge")
@@ -120,7 +119,7 @@ def simulate_action(task: Dict, config: Optional[Config] = None) -> Dict:
     task_store = TaskStore(config)
 
     sim_id   = _generate_id()
-    now      = datetime.utcnow().isoformat()
+    now      = _utc_now_iso()
     desc     = task.get("description", "")
     title    = task.get("title", task.get("id", "unknown"))
     task_link = _wikilink("tasks", task["id"], title)

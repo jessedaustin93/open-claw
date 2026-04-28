@@ -9,11 +9,10 @@ No subprocess, os.system, or execution primitive is imported or called.
 """
 import json
 import re
-from datetime import datetime
 from typing import Dict, List, Optional
 
 from .config import Config
-from .memory_store import _generate_id, _make_title, _wikilink
+from .memory_store import _generate_id, _make_title, _utc_now_iso, _wikilink
 
 
 def _jaccard(a: str, b: str) -> float:
@@ -70,7 +69,7 @@ class TaskStore:
             return None
 
         task_id = _generate_id()
-        now = datetime.utcnow().isoformat()
+        now = _utc_now_iso()
         title = _make_title(description)
         source_link = _wikilink(
             "reflections", source_reflection_id, source_reflection_title
