@@ -176,6 +176,65 @@ Execution requires explicit per-action human approval, sandboxing, and rollback 
 
 ---
 
+## Layer 4 — Optional LLM Reasoning
+
+Open-Claw works fully without an LLM. Layer 4 adds **optional AI narrative enhancement** to reflection and simulation records while keeping all existing behavior intact.
+
+**The LLM is not the memory authority.** The file-based Open-Claw system remains the source of truth. The LLM only improves the quality of reflection text and simulation planning text.
+
+### What the LLM improves
+
+| Record | LLM-enhanced sections | Always rule-based |
+|---|---|---|
+| Reflection | What Was Learned, New Patterns Noticed, Conflicts or Uncertainty, Suggested Tasks | Important Memories Reviewed, Suggested Core Memory Updates, Reflection Quality |
+| Simulation | Proposed action, expected outcome, risk bullets | Human approval flag, execution safety checks |
+
+### Enabling LLM
+
+```bash
+# Linux / macOS
+export OPENCLAW_LLM=1
+export ANTHROPIC_API_KEY=your_key_here
+python scripts/run_reflection.py
+python scripts/manage_tasks.py simulate
+
+# PowerShell
+$env:OPENCLAW_LLM="1"
+$env:ANTHROPIC_API_KEY="your_key_here"
+```
+
+Optional dependency (not required for anything else):
+```bash
+pip install anthropic
+```
+
+### Fallback behavior
+
+If `OPENCLAW_LLM` is not set, the API key is missing, `anthropic` is not installed, or the API call fails for any reason, `generate_text()` returns `None` and the rule-based path runs unchanged. No crash. No silent data change.
+
+### What the LLM never does
+
+- Write to `vault/core/` — core memory remains human-gated
+- Execute commands, call subprocess, or trigger real actions
+- Alter `source_ids`, stored metadata, or the memory authority
+- Remove the core memory warning from reflection notes
+
+### LLM metadata in JSON records
+
+Every reflection and simulation JSON record includes:
+
+```json
+{
+  "llm_used": false,
+  "llm_model": null,
+  "llm_provider": null
+}
+```
+
+These fields are `true` / model name / provider name when LLM was used.
+
+---
+
 ## Timestamps and Timezones
 
 Open-Claw uses a two-layer timestamp strategy to avoid timezone bugs while keeping notes readable:
@@ -313,6 +372,7 @@ open-claw/
     tasks.py          # Task storage layer (Layer 3)
     decision.py       # Decision engine — select_next_task() (Layer 3)
     simulate.py       # Action simulation — simulate_action() (Layer 3, no execution)
+    llm.py            # Optional LLM adapter (Layer 4) — anthropic not required
     search.py         # Keyword search (vector-ready interface)
     linker.py         # Automatic Obsidian wikilink generation
     exceptions.py     # CoreMemoryProtectedError
@@ -321,7 +381,7 @@ open-claw/
     run_reflection.py # Trigger a reflection pass
     search_memory.py  # Search across all memory layers
     manage_tasks.py   # Layer 3: tasks | decide | simulate | loop
-  tests/              # pytest suite (66 tests across Layers 1–3 + timestamps)
+  tests/              # pytest suite (105 tests across Layers 1–4)
   vault/              # Human-readable Markdown notes (open as Obsidian vault)
   memory/             # Structured JSON memory store + schemas
   docs/               # Architecture and design documentation

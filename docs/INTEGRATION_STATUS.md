@@ -20,8 +20,8 @@ integrations plug in. It is the source of truth for contributors picking up the 
 | **Search** | ✅ Complete | `search.py` | Keyword search across all memory layers |
 | **Core protection** | ✅ Complete | `memory_store.py`, `exceptions.py` | `CoreMemoryProtectedError` enforced at write layer |
 | **Timezone handling** | ✅ Complete | `time_utils.py` | UTC in JSON, local time in Markdown/CLI |
-| **LLM reflection** | 🔲 Planned | `reflect.py:_generate_reflection` | Replace rule-based renderer with LLM call |
-| **LLM simulation** | 🔲 Planned | `simulate.py:_propose_action`, `_expected_outcome` | Replace heuristics with LLM reasoning |
+| **LLM reflection** | ✅ Complete | `llm.py`, `reflect.py` | Optional LLM narrative enhancement; rule-based fallback |
+| **LLM simulation** | ✅ Complete | `llm.py`, `simulate.py` | Optional LLM planning; rule-based fallback |
 | **Vector search** | 🔲 Planned | `search.py` | Current interface is keyword; swap to embeddings |
 | **Real action execution** | 🔲 Out of scope | — | Simulation only by design; tool use added externally |
 
@@ -33,10 +33,8 @@ integrations plug in. It is the source of truth for contributors picking up the 
 ingest(text)
   │
   ├─▶ store_raw()          → memory/raw/{id}.json   + vault/raw/{id}.md
-  │
   ├─▶ store_episodic()     → memory/episodic/{id}.json + vault/episodic/{id}.md
   │       (if importance >= config.importance_threshold)
-  │
   └─▶ store_semantic()     → memory/semantic/{id}.json + vault/semantic/{id}.md
           (if concept + semantic keyword detected)
 
@@ -44,8 +42,12 @@ reflect()
   │
   ├─▶ Reads all episodic + semantic memories
   ├─▶ _analyse() — tag counts, patterns, uncertainty, tasks, confidence
-  ├─▶ _generate_reflection(analysis) — rule-based (LLM swap point)
+  ├─▶ _generate_reflection(analysis, config)
+  │     ├─▶ [if llm_enabled] generate_text(build_reflection_prompt(analysis), config)
+  │     │     → LLM writes sections 1/3/4/5 (narrative)
+  │     └─▶ Rule-based sections 2/6/7 always (memories list, core warning, quality)
   ├─▶ store_reflection()   → memory/reflections/{id}.json + vault/reflections/{id}.md
+  │     (includes llm_used, llm_model, llm_provider in JSON)
   └─▶ create_tasks_from_reflection() → memory/tasks/{id}.json + vault/tasks/{id}.md
 
 select_next_task()
@@ -56,42 +58,78 @@ select_next_task()
 
 simulate_action(task)
   │
-  ├─▶ _propose_action()     — rule-based (LLM swap point)
-  ├─▶ _expected_outcome()   — rule-based (LLM swap point)
-  ├─▶ _estimate_risks()     — heuristic signals
-  ├─▶ store() simulation    → memory/simulations/{id}.json + vault/simulations/{id}.md
+  ├─▶ [if llm_enabled] generate_text(build_simulation_prompt(task), config)
+  │     → LLM writes proposed_action, expected_outcome, risk_assessment
+  ├─▶ Rule-based fallback for any LLM-missing field
+  ├─▶ store() simulation   → memory/simulations/{id}.json + vault/simulations/{id}.md
+  │     (includes llm_used, llm_model, llm_provider in JSON)
   └─▶ Updates task status to "simulated"
 ```
 
 ---
 
-## LLM Swap Points
+## Layer 4 — LLM Integration
 
-Three functions are designated as clean LLM replacement targets.  
-Their signatures, callers, and storage paths do not change — only the function body is replaced.
+### Architecture
 
-### 1. `reflect.py:_generate_reflection(analysis: Dict) → str`
+LLM support is handled by `src/open_claw/llm.py`. It is an **optional adapter** —
+the system works fully without it and without the `anthropic` package installed.
 
-Replace the function body with an LLM call:
-
-```python
-import anthropic
-client = anthropic.Anthropic()
-response = client.messages.create(
-    model="claude-sonnet-4-6",
-    max_tokens=2048,
-    messages=[{"role": "user", "content": _build_prompt(analysis)}],
-)
-return response.content[0].text
+```
+llm.py
+  generate_text(prompt, config) → str | None
+    │
+    ├─▶ Returns None if config.llm_enabled is False
+    ├─▶ Returns None if ANTHROPIC_API_KEY is missing
+    ├─▶ Returns None on any API / import error
+    └─▶ Calls _call_anthropic(prompt, config) if all checks pass
 ```
 
-### 2. `simulate.py:_propose_action(description: str) → str`
+### Enabling LLM
 
-Replace the heuristic with an LLM call that reasons about what action to take.
+```bash
+# Linux / macOS
+export OPENCLAW_LLM=1
+export ANTHROPIC_API_KEY=your_key_here
 
-### 3. `simulate.py:_expected_outcome(title: str, description: str) → str`
+# PowerShell
+$env:OPENCLAW_LLM="1"
+$env:ANTHROPIC_API_KEY="your_key_here"
+```
 
-Replace the template string with an LLM call that predicts realistic outcomes.
+Optional dependency:
+```bash
+pip install anthropic
+```
+
+### What the LLM does
+
+| Component | LLM writes | Always rule-based |
+|---|---|---|
+| Reflection | Sections 1, 3, 4, 5 (narrative) | Sections 2, 6, 7 (memories list, core warning, quality) |
+| Simulation | `proposed_action`, `expected_outcome`, risk bullets | Fallback when any field missing; human approval flag |
+
+### What the LLM never does
+
+- Write to `vault/core/` (enforced at code level)
+- Remove the core memory warning block (section 6 is always rule-based)
+- Execute commands or trigger real actions
+- Override `source_ids` or stored metadata
+- Become the memory authority (all records are written from Open-Claw's own code)
+
+### Metadata added to JSON records
+
+Both reflection and simulation JSON records now include:
+
+```json
+{
+  "llm_used": true,
+  "llm_model": "claude-3-5-sonnet-latest",
+  "llm_provider": "anthropic"
+}
+```
+
+These are `false` / `null` when LLM is disabled or unavailable.
 
 ---
 
@@ -100,19 +138,20 @@ Replace the template string with an LLM call that predicts realistic outcomes.
 ```
 Open-Claw/
   src/open_claw/          Python package
-    config.py             Paths and tunable parameters
+    config.py             Paths, tunable parameters, LLM config
     memory_store.py       Read/write all memory layers (JSON + Markdown)
     ingest.py             Raw → episodic → semantic promotion logic
-    reflect.py            Reflection engine — Layer 2
+    reflect.py            Reflection engine — Layers 2 + 4
     tasks.py              Task storage — Layer 3
     decision.py           Decision engine — Layer 3
-    simulate.py           Action simulation — Layer 3 (no execution)
+    simulate.py           Action simulation — Layers 3 + 4 (no execution)
+    llm.py                Optional LLM adapter — Layer 4
     linker.py             Automatic wikilink generation
     search.py             Keyword search (vector-ready interface)
     time_utils.py         UTC storage / local display helpers
     exceptions.py         CoreMemoryProtectedError
   scripts/                CLI entry points
-  tests/                  pytest suite
+  tests/                  pytest suite (105 tests)
   vault/                  Obsidian-compatible Markdown vault
   memory/                 Structured JSON store
   docs/                   This directory
@@ -128,4 +167,5 @@ Open-Claw/
 | Web UI | Out of scope; Obsidian covers visualization |
 | Real action execution | Simulation layer exists; execution requires explicit human tooling |
 | Vendor / external repos | No vendored code; no bundled external libraries |
+| Hard anthropic dependency | `pip install anthropic` is optional; system runs without it |
 | Autonomous operation | Every significant action requires script invocation or human approval |

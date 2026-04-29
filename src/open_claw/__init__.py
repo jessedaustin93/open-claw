@@ -3,6 +3,7 @@ from .decision import DecisionStore, select_next_task
 from .exceptions import CoreMemoryProtectedError
 from .ingest import ingest
 from .linker import link_memories
+from .llm import generate_text
 from .memory_store import MemoryStore
 from .reflect import reflect
 from .search import search
@@ -18,6 +19,7 @@ __all__ = [
     "SimulationStore",
     "TaskStore",
     "create_tasks_from_reflection",
+    "generate_text",
     "ingest",
     "link_memories",
     "local_date_time_string",

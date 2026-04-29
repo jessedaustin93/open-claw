@@ -1,6 +1,7 @@
 from typing import Dict, List, Optional, Tuple
 
 from .config import Config
+from .llm import build_reflection_prompt, generate_text, parse_reflection_sections
 from .memory_store import MemoryStore, _wikilink
 from .tasks import create_tasks_from_reflection
 from .time_utils import local_now_string, utc_now_iso
@@ -94,16 +95,20 @@ def reflect(config: Optional[Config] = None) -> Dict:
     analysis = _analyse(episodic, semantic)
     analysis["display_tz"] = config.display_timezone
 
-    content = _generate_reflection(analysis)
+    content = _generate_reflection(analysis, config)
+    llm_meta = analysis.pop("_llm_meta", {"llm_used": False, "llm_model": None, "llm_provider": None})
 
     metadata = {
-        "source_types":          analysis["source_types"],
-        "confidence":            analysis["confidence"],
-        "suggested_tasks":       analysis["suggested_tasks"],
+        "source_types":           analysis["source_types"],
+        "confidence":             analysis["confidence"],
+        "suggested_tasks":        analysis["suggested_tasks"],
         "suggested_core_updates": analysis["suggested_core_updates"],
-        "detected_patterns":     analysis["detected_patterns"],
-        "uncertainty_notes":     analysis["uncertainty_notes"],
-        "generated_at":          analysis["generated_at"],
+        "detected_patterns":      analysis["detected_patterns"],
+        "uncertainty_notes":      analysis["uncertainty_notes"],
+        "generated_at":           analysis["generated_at"],
+        "llm_used":               llm_meta["llm_used"],
+        "llm_model":              llm_meta["llm_model"],
+        "llm_provider":           llm_meta["llm_provider"],
     }
 
     reflection = store.store_reflection(
@@ -234,33 +239,34 @@ def _compute_confidence(
     return round(max(0.0, min(1.0, source_score + tag_diversity - uncertainty_penalty)), 3)
 
 
-# ---------------------------------------------------------------------------
-# TODO (LLM — Layer 4): _generate_reflection is the primary LLM swap point.
-#
-# Replace the entire function body with an LLM call:
-#
-#   import anthropic
-#   client = anthropic.Anthropic()
-#   response = client.messages.create(
-#       model="claude-sonnet-4-6",
-#       max_tokens=2048,
-#       messages=[{"role": "user", "content": _build_prompt(analysis)}],
-#   )
-#   return response.content[0].text
-#
-# The function signature, caller (reflect()), and storage path do not change.
-# See docs/INTEGRATION_STATUS.md for the full Layer 4 integration plan.
-# ---------------------------------------------------------------------------
+def _generate_reflection(analysis: Dict, config: Optional[Config] = None) -> str:
+    """Generate a 7-section reflection Markdown document.
 
-def _generate_reflection(analysis: Dict) -> str:
-    """Rule-based reflection renderer — placeholder for LLM integration.
-
-    Produces a Markdown document with exactly 7 sections so that downstream
-    tools and tests can locate each section by header name.
+    When config.llm_enabled is True and the LLM responds, sections 1/3/4/5
+    (narrative) are replaced with LLM text. Sections 2/6/7 (memories list,
+    core update warning, quality score) are always rule-based for safety.
+    Falls back to fully rule-based when LLM is disabled or unavailable.
     """
     ep_count = analysis["source_types"].get("episodic", 0)
     sem_count = analysis["source_types"].get("semantic", 0)
     display_tz = analysis.get("display_tz", "America/New_York")
+
+    # --- LLM attempt for narrative sections ---
+    llm_sections: Dict[str, str] = {}
+    llm_meta: Dict = {"llm_used": False, "llm_model": None, "llm_provider": None}
+
+    if config is not None:
+        llm_text = generate_text(build_reflection_prompt(analysis), config)
+        if llm_text:
+            llm_sections = parse_reflection_sections(llm_text)
+            if llm_sections:
+                llm_meta = {
+                    "llm_used":     True,
+                    "llm_model":    config.llm_model,
+                    "llm_provider": config.llm_provider,
+                }
+
+    analysis["_llm_meta"] = llm_meta  # picked up by reflect() for JSON metadata
 
     lines = [
         f"## Recursive Reflection — {local_now_string(display_tz)}",
@@ -269,24 +275,27 @@ def _generate_reflection(analysis: Dict) -> str:
         "",
     ]
 
-    # Section 1: What Was Learned
+    # Section 1: What Was Learned (LLM-enhanced or rule-based)
     lines.append("### What Was Learned")
-    high = analysis["high_importance"]
-    if high:
-        for m in high:
-            subdir = _TYPE_SUBDIR.get(m["type"], m["type"])
-            link = _wikilink(subdir, m["id"], m.get("title"))
-            if m["type"] == "episodic":
-                lines.append(f"- {link} — {m.get('summary', '')[:100]}")
-            else:
-                lines.append(
-                    f"- {link} — {m.get('concept', '')}: {m.get('description', '')[:80]}"
-                )
+    if "What Was Learned" in llm_sections:
+        lines.append(llm_sections["What Was Learned"])
     else:
-        lines.append("- No high-importance memories reviewed in this pass.")
+        high = analysis["high_importance"]
+        if high:
+            for m in high:
+                subdir = _TYPE_SUBDIR.get(m["type"], m["type"])
+                link = _wikilink(subdir, m["id"], m.get("title"))
+                if m["type"] == "episodic":
+                    lines.append(f"- {link} — {m.get('summary', '')[:100]}")
+                else:
+                    lines.append(
+                        f"- {link} — {m.get('concept', '')}: {m.get('description', '')[:80]}"
+                    )
+        else:
+            lines.append("- No high-importance memories reviewed in this pass.")
     lines.append("")
 
-    # Section 2: Important Memories Reviewed
+    # Section 2: Important Memories Reviewed — always rule-based (no LLM invention of sources)
     lines.append("### Important Memories Reviewed")
     for m in analysis["sources"][:10]:
         subdir = _TYPE_SUBDIR.get(m["type"], m["type"])
@@ -294,36 +303,45 @@ def _generate_reflection(analysis: Dict) -> str:
         lines.append(f"- {link} (importance: {m.get('importance', 0):.2f})")
     lines.append("")
 
-    # Section 3: New Patterns Noticed
+    # Section 3: New Patterns Noticed (LLM-enhanced or rule-based)
     lines.append("### New Patterns Noticed")
-    if analysis["detected_patterns"]:
-        for p in analysis["detected_patterns"]:
-            lines.append(f"- {p}")
+    if "New Patterns Noticed" in llm_sections:
+        lines.append(llm_sections["New Patterns Noticed"])
     else:
-        lines.append("- No repeated patterns detected in this pass.")
+        if analysis["detected_patterns"]:
+            for p in analysis["detected_patterns"]:
+                lines.append(f"- {p}")
+        else:
+            lines.append("- No repeated patterns detected in this pass.")
     lines.append("")
 
-    # Section 4: Conflicts or Uncertainty
+    # Section 4: Conflicts or Uncertainty (LLM-enhanced or rule-based)
     lines.append("### Conflicts or Uncertainty")
-    if analysis["uncertainty_notes"]:
-        for note in analysis["uncertainty_notes"]:
-            lines.append(f"- {note}")
+    if "Conflicts or Uncertainty" in llm_sections:
+        lines.append(llm_sections["Conflicts or Uncertainty"])
     else:
-        lines.append("- No uncertainty signals detected.")
+        if analysis["uncertainty_notes"]:
+            for note in analysis["uncertainty_notes"]:
+                lines.append(f"- {note}")
+        else:
+            lines.append("- No uncertainty signals detected.")
     lines.append("")
 
-    # Section 5: Suggested Tasks
+    # Section 5: Suggested Tasks (LLM-enhanced or rule-based)
     lines.append("### Suggested Tasks")
-    if analysis["suggested_tasks"]:
-        for task in analysis["suggested_tasks"]:
-            lines.append(f"- {task}")
+    if "Suggested Tasks" in llm_sections:
+        lines.append(llm_sections["Suggested Tasks"])
     else:
-        lines.append(
-            "- No explicit task phrases detected. Review memories for implied next steps."
-        )
+        if analysis["suggested_tasks"]:
+            for task in analysis["suggested_tasks"]:
+                lines.append(f"- {task}")
+        else:
+            lines.append(
+                "- No explicit task phrases detected. Review memories for implied next steps."
+            )
     lines.append("")
 
-    # Section 6: Suggested Core Memory Updates
+    # Section 6: Suggested Core Memory Updates — always rule-based (human-gated safety)
     lines.append("### Suggested Core Memory Updates")
     lines.append("> **Human review required.** These are suggestions only.")
     lines.append("> Edit `vault/core/` manually after reviewing. Automated processes")
@@ -336,13 +354,20 @@ def _generate_reflection(analysis: Dict) -> str:
         lines.append("- No strong candidates identified in this pass.")
     lines.append("")
 
-    # Section 7: Reflection Quality
+    # Section 7: Reflection Quality — always rule-based
     lines.append("### Reflection Quality")
     lines.append(f"**Confidence:** {analysis['confidence']:.2f}")
     lines.append("")
-    lines.append(
-        "_This reflection was generated by rule-based analysis. "
-        "See `reflect.py:_generate_reflection` to swap in LLM-based synthesis._"
-    )
+    if llm_meta["llm_used"]:
+        lines.append(
+            f"_Narrative sections enhanced by {llm_meta['llm_provider']} "
+            f"`{llm_meta['llm_model']}`. "
+            "Structural sections (memories list, core updates) are rule-based._"
+        )
+    else:
+        lines.append(
+            "_This reflection was generated by rule-based analysis. "
+            "Enable LLM via OPENCLAW_LLM=1 for narrative enhancement._"
+        )
 
     return "\n".join(lines)
