@@ -18,8 +18,9 @@ import json
 from typing import Dict, List, Optional
 
 from .config import Config
-from .memory_store import _generate_id, _utc_now_iso, _wikilink
+from .memory_store import _generate_id, _wikilink
 from .tasks import TaskStore
+from .time_utils import local_date_time_string, utc_now_iso
 
 _DESTRUCTIVE_SIGNALS = ("delete", "remove", "drop", "clear", "wipe", "purge")
 _EXTERNAL_SIGNALS    = ("deploy", "push", "publish", "release", "ship")
@@ -78,9 +79,12 @@ class SimulationStore:
             "\n".join(f"- {r}" for r in sim.get("risks", []))
             or "- None identified"
         )
+        display_tz = self.config.display_timezone
+        local_ts = local_date_time_string(sim["created_at"], display_tz)
         task_link = _wikilink("tasks", sim["task_id"], sim["task_title"])
         body = (
             f"# Simulation — {sim['task_title']}\n\n"
+            f"**Created:** {local_ts}\n\n"
             f"**Task:** {task_link}\n\n"
             f"**Proposed Action:** {sim['proposed_action']}\n\n"
             f"**Expected Outcome:** {sim['expected_outcome']}\n\n"
@@ -119,7 +123,7 @@ def simulate_action(task: Dict, config: Optional[Config] = None) -> Dict:
     task_store = TaskStore(config)
 
     sim_id   = _generate_id()
-    now      = _utc_now_iso()
+    now      = utc_now_iso()
     desc     = task.get("description", "")
     title    = task.get("title", task.get("id", "unknown"))
     task_link = _wikilink("tasks", task["id"], title)
@@ -147,12 +151,14 @@ def simulate_action(task: Dict, config: Optional[Config] = None) -> Dict:
 
 
 # ---------------------------------------------------------------------------
-# Rule-based simulation helpers
-# Replace _propose_action / _expected_outcome bodies with LLM calls when ready.
-# Signatures do not change.
+# TODO (LLM — Layer 4): Replace _propose_action and _expected_outcome bodies
+# with LLM calls when ready. Signatures and callers do not change.
+# See docs/INTEGRATION_STATUS.md for the full Layer 4 integration plan.
 # ---------------------------------------------------------------------------
 
 def _propose_action(description: str) -> str:
+    # TODO (LLM — Layer 4): Replace this body with an LLM call that reasons
+    # about the best concrete action given the task description.
     desc_lower = description.lower()
     if any(s in desc_lower for s in _DESTRUCTIVE_SIGNALS):
         return f"[DESTRUCTIVE — human approval required] {description[:120]}"
@@ -162,6 +168,8 @@ def _propose_action(description: str) -> str:
 
 
 def _expected_outcome(title: str, description: str) -> str:
+    # TODO (LLM — Layer 4): Replace this body with an LLM call that predicts
+    # realistic outcomes based on the task title and description.
     return (
         f"Task '{title}' is addressed according to its description. "
         "Relevant memory layers are updated as needed by subsequent ingestion."

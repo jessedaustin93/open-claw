@@ -54,6 +54,17 @@ Episodic and semantic memories are derived from raws, not replacements for them.
 
 ## How Obsidian Is Used
 
+### Quick Start
+
+1. Clone the repository (or `git pull` the latest branch)
+2. Open **Obsidian** → **Open folder as vault** → select the `vault/` directory
+3. Start from [`vault/index.md`](vault/index.md) — it links all memory layers
+4. Use `Ctrl+G` for the graph view, backlinks panel for tracing, and tag search for filtering
+
+Obsidian is **not required**. All files are plain Markdown readable in any editor.
+
+---
+
 Every stored memory creates a Markdown file inside `vault/`.  
 Each file uses YAML frontmatter and Obsidian-style `[[wikilinks]]` to connect related notes.
 
@@ -162,6 +173,40 @@ python scripts/manage_tasks.py loop      # decide + simulate once
 ### Why Simulation Instead of Execution
 
 Execution requires explicit per-action human approval, sandboxing, and rollback mechanisms. Layer 3 builds the planning substrate — structured task objects, scored decisions, and detailed simulation records — so that when real tool use is added, the reasoning layer already exists and is fully auditable.
+
+---
+
+## Timestamps and Timezones
+
+Open-Claw uses a two-layer timestamp strategy to avoid timezone bugs while keeping notes readable:
+
+| Location | Format | Example |
+|---|---|---|
+| JSON records (`created`, `created_at`, `generated_at`) | UTC ISO-8601 with `+00:00` offset | `2026-04-28T21:07:13.050967+00:00` |
+| Markdown notes and CLI output | Local time (configurable) | `2026-04-28 5:07 PM EDT` |
+
+**Default display timezone:** `America/New_York` — change it in `Config.display_timezone`.
+
+```python
+from open_claw import Config
+config = Config()
+config.display_timezone = "Europe/London"   # or any IANA name
+```
+
+All helpers live in `src/open_claw/time_utils.py`:
+
+| Function | Returns |
+|---|---|
+| `utc_now_iso()` | `'2026-04-28T21:07:13+00:00'` |
+| `local_time_string(ts, tz)` | `'5:07 PM EDT'` |
+| `local_date_time_string(ts, tz)` | `'2026-04-28 5:07 PM EDT'` |
+| `local_now_string(tz)` | current local date + time |
+
+Timezone conversion uses `zoneinfo` (stdlib, Python 3.9+). On systems without the OS timezone database, install `tzdata`:
+
+```bash
+pip install tzdata
+```
 
 ---
 
@@ -276,7 +321,7 @@ open-claw/
     run_reflection.py # Trigger a reflection pass
     search_memory.py  # Search across all memory layers
     manage_tasks.py   # Layer 3: tasks | decide | simulate | loop
-  tests/              # pytest suite (54 tests across Layers 1–3)
+  tests/              # pytest suite (66 tests across Layers 1–3 + timestamps)
   vault/              # Human-readable Markdown notes (open as Obsidian vault)
   memory/             # Structured JSON memory store + schemas
   docs/               # Architecture and design documentation

@@ -1,29 +1,13 @@
 import json
 import re
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
-from zoneinfo import ZoneInfo
 
 from .config import Config
 from .exceptions import CoreMemoryProtectedError
-
-_EST = ZoneInfo("America/New_York")
-
-
-def _utc_now() -> datetime:
-    return datetime.now(timezone.utc)
-
-
-def _utc_now_iso() -> str:
-    return _utc_now().isoformat()
-
-
-def _est_display(dt: Optional[datetime] = None) -> str:
-    if dt is None:
-        dt = _utc_now()
-    return dt.astimezone(_EST).strftime("%Y-%m-%d %H:%M %Z")
+from .time_utils import utc_now_iso
 
 # ---------------------------------------------------------------------------
 # Importance scoring
@@ -178,7 +162,7 @@ class MemoryStore:
     def store_raw(self, text: str, source: str = "manual") -> Dict:
         """Write a verbatim raw memory. Never called again on the same record."""
         mem_id = _generate_id()
-        now = _utc_now_iso()
+        now = utc_now_iso()
         importance = _score_importance(text)
         tags = _extract_tags(text)
         title = _make_title(text)
@@ -231,7 +215,7 @@ class MemoryStore:
         raw_title: Optional[str] = None,
     ) -> Dict:
         mem_id = _generate_id()
-        now = _utc_now_iso()
+        now = utc_now_iso()
         title = _make_title(summary)
         raw_link = _wikilink("raw", raw_id, raw_title)
 
@@ -284,7 +268,7 @@ class MemoryStore:
         source: str,
     ) -> Dict:
         mem_id = _generate_id()
-        now = _utc_now_iso()
+        now = utc_now_iso()
         title = _make_title(concept)
 
         memory = {
@@ -346,8 +330,8 @@ class MemoryStore:
                        suggested_tasks, etc.) spread directly into the JSON record.
         """
         mem_id = _generate_id()
-        now = _utc_now_iso()
-        title = f"reflection-{_utc_now().astimezone(_EST).strftime('%Y%m%d-%H%M')}"
+        now = utc_now_iso()
+        title = f"reflection-{datetime.now(UTC).strftime('%Y%m%d-%H%M')}"
 
         links: List[str] = []
         for sid in source_ids:
