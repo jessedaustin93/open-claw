@@ -233,19 +233,20 @@ def test_core_memory_not_written_by_reflect(tmp_path):
 # LLM swap-point markers
 # ---------------------------------------------------------------------------
 
-def test_llm_swap_point_in_reflect():
-    """reflect.py must contain a clearly marked LLM TODO for _generate_reflection."""
+def test_llm_integration_in_reflect():
+    """reflect.py must import and use generate_text from llm module (Layer 4)."""
     src = (SRC_DIR / "reflect.py").read_text(encoding="utf-8")
-    assert "TODO (LLM" in src and "_generate_reflection" in src, (
-        "reflect.py is missing the LLM swap-point marker for _generate_reflection"
-    )
+    assert "generate_text" in src, "reflect.py must import generate_text from llm"
+    assert "_generate_reflection" in src, "reflect.py must define _generate_reflection"
+    assert "llm_used" in src, "reflect.py must set llm_used metadata"
 
 
-def test_llm_swap_points_in_simulate():
-    """simulate.py must contain LLM TODO markers for _propose_action and _expected_outcome."""
+def test_llm_integration_in_simulate():
+    """simulate.py must import and use generate_text from llm module (Layer 4)."""
     src = (SRC_DIR / "simulate.py").read_text(encoding="utf-8")
-    assert "TODO (LLM" in src, "simulate.py is missing LLM TODO markers"
+    assert "generate_text" in src, "simulate.py must import generate_text from llm"
     assert "_propose_action" in src and "_expected_outcome" in src
+    assert "llm_used" in src, "simulate.py must set llm_used metadata"
 
 
 def test_no_real_execution_in_simulate():

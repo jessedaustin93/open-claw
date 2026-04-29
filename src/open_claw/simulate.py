@@ -18,6 +18,7 @@ import json
 from typing import Dict, List, Optional
 
 from .config import Config
+from .llm import build_simulation_prompt, generate_text, parse_simulation_sections
 from .memory_store import _generate_id, _wikilink
 from .tasks import TaskStore
 from .time_utils import local_date_time_string, utc_now_iso
@@ -128,9 +129,24 @@ def simulate_action(task: Dict, config: Optional[Config] = None) -> Dict:
     title    = task.get("title", task.get("id", "unknown"))
     task_link = _wikilink("tasks", task["id"], title)
 
-    proposed_action  = _propose_action(desc)
-    expected_outcome = _expected_outcome(title, desc)
-    risks            = _estimate_risks(desc, config)
+    # --- LLM attempt for planning fields (falls back to rule-based on any failure) ---
+    llm_meta: Dict = {"llm_used": False, "llm_model": None, "llm_provider": None}
+    llm_sections: Dict = {}
+
+    if config.llm_enabled:
+        llm_text = generate_text(build_simulation_prompt(task), config)
+        if llm_text:
+            llm_sections = parse_simulation_sections(llm_text)
+            if llm_sections:
+                llm_meta = {
+                    "llm_used":     True,
+                    "llm_model":    config.llm_model,
+                    "llm_provider": config.llm_provider,
+                }
+
+    proposed_action  = llm_sections.get("Proposed Action") or _propose_action(desc)
+    expected_outcome = llm_sections.get("Expected Outcome") or _expected_outcome(title, desc)
+    risks            = _risks_from_llm(llm_sections.get("Risk Assessment"), desc, config)
 
     simulation: Dict = {
         "id":                      sim_id,
@@ -142,6 +158,9 @@ def simulate_action(task: Dict, config: Optional[Config] = None) -> Dict:
         "required_human_approval": config.require_human_approval_for_simulation,
         "created_at":              now,
         "source_links":            [task_link],
+        "llm_used":                llm_meta["llm_used"],
+        "llm_model":               llm_meta["llm_model"],
+        "llm_provider":            llm_meta["llm_provider"],
     }
 
     sim_store.store(simulation)
@@ -151,14 +170,11 @@ def simulate_action(task: Dict, config: Optional[Config] = None) -> Dict:
 
 
 # ---------------------------------------------------------------------------
-# TODO (LLM — Layer 4): Replace _propose_action and _expected_outcome bodies
-# with LLM calls when ready. Signatures and callers do not change.
-# See docs/INTEGRATION_STATUS.md for the full Layer 4 integration plan.
+# Rule-based fallbacks — used when LLM is disabled or unavailable.
+# LLM integration is in simulate_action() via llm.generate_text().
 # ---------------------------------------------------------------------------
 
 def _propose_action(description: str) -> str:
-    # TODO (LLM — Layer 4): Replace this body with an LLM call that reasons
-    # about the best concrete action given the task description.
     desc_lower = description.lower()
     if any(s in desc_lower for s in _DESTRUCTIVE_SIGNALS):
         return f"[DESTRUCTIVE — human approval required] {description[:120]}"
@@ -168,12 +184,28 @@ def _propose_action(description: str) -> str:
 
 
 def _expected_outcome(title: str, description: str) -> str:
-    # TODO (LLM — Layer 4): Replace this body with an LLM call that predicts
-    # realistic outcomes based on the task title and description.
     return (
         f"Task '{title}' is addressed according to its description. "
         "Relevant memory layers are updated as needed by subsequent ingestion."
     )
+
+
+def _risks_from_llm(llm_text: Optional[str], description: str, config: Config) -> List[str]:
+    """Parse LLM Risk Assessment text into a risk list, or fall back to rule-based."""
+    if llm_text:
+        risks = [
+            line.lstrip("-•* ").strip()
+            for line in llm_text.splitlines()
+            if line.strip()
+        ]
+        risks = [r for r in risks if r]
+        if risks:
+            if config.require_human_approval_for_simulation:
+                approval = "Human review required before any real action is taken."
+                if not any("human review" in r.lower() for r in risks):
+                    risks = [approval] + risks
+            return risks
+    return _estimate_risks(description, config)
 
 
 def _estimate_risks(description: str, config: Config) -> List[str]:

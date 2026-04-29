@@ -68,7 +68,7 @@ Each cycle through the loop increases the depth and quality of stored knowledge 
 
 **Low-value guard:** If the source count falls below `config.min_reflection_sources` (default: 1), the pass is skipped unless `config.allow_low_value_reflections = True`.
 
-**Reflection JSON metadata fields** (Layer 2, stored alongside core fields):
+**Reflection JSON metadata fields** (Layers 2 + 4, stored alongside core fields):
 
 | Field | Type | Description |
 |---|---|---|
@@ -79,9 +79,11 @@ Each cycle through the loop increases the depth and quality of stored knowledge 
 | `detected_patterns` | list[str] | Repeated tags and high-importance clusters |
 | `uncertainty_notes` | list[str] | Memories containing uncertainty-signal words |
 | `generated_at` | ISO timestamp | When the analysis was computed |
+| `llm_used` | bool | Whether an LLM enhanced the narrative sections |
+| `llm_model` | str or null | Model name used, or null |
+| `llm_provider` | str or null | Provider name, or null |
 
-**LLM swap point:** `reflect.py:_generate_reflection(analysis: Dict) -> str` receives the full structured analysis dict and returns Markdown.  
-Replace the function body with an LLM call — the caller, the storage path, and the analysis structure do not change.
+**LLM integration (Layer 4):** When `config.llm_enabled` is True and `ANTHROPIC_API_KEY` is set, `_generate_reflection` calls `generate_text()` from `llm.py` to enhance sections 1, 3, 4, and 5 with LLM-synthesized narrative. Sections 2, 6, and 7 are always rule-based for safety (no LLM invention of source memories, no bypassing of the core memory warning). The system falls back silently to fully rule-based if LLM is unavailable.
 
 ---
 
@@ -117,16 +119,15 @@ Decision records include: `selected_task_id`, `reason`, `confidence`, `alternati
 **Safety guarantee:** No subprocess, os.system, network, or execution primitive is imported or called.
 All output is local files only. `enable_real_actions` is always `False` — there is no execution path to enable it.
 
-1. Produces `proposed_action`, `expected_outcome`, and `risks` from rule-based analysis of the task description.
-2. Flags destructive/external/network signals with explicit warnings.
-3. Writes a simulation record to `memory/simulations/` and `vault/simulations/`.
-4. Marks the task `simulated`.
+1. If `config.llm_enabled` is True: calls `generate_text()` via `llm.py` to produce `proposed_action`, `expected_outcome`, and risk bullets.
+2. Falls back to rule-based `_propose_action()` / `_expected_outcome()` / `_estimate_risks()` for any field the LLM did not return.
+3. Flags destructive/external/network signals with explicit warnings (both LLM and rule-based paths).
+4. Writes a simulation record to `memory/simulations/` and `vault/simulations/`.
+5. Marks the task `simulated`.
 
-Simulation records include: `task_id`, `proposed_action`, `expected_outcome`, `risks`, `required_human_approval` (always True by default), `source_links`.
+Simulation records include: `task_id`, `proposed_action`, `expected_outcome`, `risks`, `required_human_approval` (always True by default), `source_links`, `llm_used`, `llm_model`, `llm_provider`.
 
 **Why no real execution?** Open-Claw is a memory and reasoning framework. Execution capability requires explicit human approval for each action, proper sandboxing, and rollback mechanisms — none of which exist yet. This layer is the planning substrate that prepares for future tool use without risking uncontrolled system changes.
-
-**LLM swap points:** `_propose_action()` and `_expected_outcome()` in `simulate.py` are the designated replacement points. Replace their bodies with LLM calls when ready — signatures do not change.
 
 ### Layer 3 CLI
 
