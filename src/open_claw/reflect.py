@@ -235,9 +235,9 @@ def _compute_confidence(
 
 
 # ---------------------------------------------------------------------------
-# _generate_reflection is the designated LLM swap point.
+# TODO (LLM — Layer 4): _generate_reflection is the primary LLM swap point.
 #
-# Replace this entire function body with an LLM call when ready:
+# Replace the entire function body with an LLM call:
 #
 #   import anthropic
 #   client = anthropic.Anthropic()
@@ -249,6 +249,7 @@ def _compute_confidence(
 #   return response.content[0].text
 #
 # The function signature, caller (reflect()), and storage path do not change.
+# See docs/INTEGRATION_STATUS.md for the full Layer 4 integration plan.
 # ---------------------------------------------------------------------------
 
 def _generate_reflection(analysis: Dict) -> str:

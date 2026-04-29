@@ -151,12 +151,14 @@ def simulate_action(task: Dict, config: Optional[Config] = None) -> Dict:
 
 
 # ---------------------------------------------------------------------------
-# Rule-based simulation helpers
-# Replace _propose_action / _expected_outcome bodies with LLM calls when ready.
-# Signatures do not change.
+# TODO (LLM — Layer 4): Replace _propose_action and _expected_outcome bodies
+# with LLM calls when ready. Signatures and callers do not change.
+# See docs/INTEGRATION_STATUS.md for the full Layer 4 integration plan.
 # ---------------------------------------------------------------------------
 
 def _propose_action(description: str) -> str:
+    # TODO (LLM — Layer 4): Replace this body with an LLM call that reasons
+    # about the best concrete action given the task description.
     desc_lower = description.lower()
     if any(s in desc_lower for s in _DESTRUCTIVE_SIGNALS):
         return f"[DESTRUCTIVE — human approval required] {description[:120]}"
@@ -166,6 +168,8 @@ def _propose_action(description: str) -> str:
 
 
 def _expected_outcome(title: str, description: str) -> str:
+    # TODO (LLM — Layer 4): Replace this body with an LLM call that predicts
+    # realistic outcomes based on the task title and description.
     return (
         f"Task '{title}' is addressed according to its description. "
         "Relevant memory layers are updated as needed by subsequent ingestion."

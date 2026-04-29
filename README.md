@@ -54,6 +54,17 @@ Episodic and semantic memories are derived from raws, not replacements for them.
 
 ## How Obsidian Is Used
 
+### Quick Start
+
+1. Clone the repository (or `git pull` the latest branch)
+2. Open **Obsidian** → **Open folder as vault** → select the `vault/` directory
+3. Start from [`vault/index.md`](vault/index.md) — it links all memory layers
+4. Use `Ctrl+G` for the graph view, backlinks panel for tracing, and tag search for filtering
+
+Obsidian is **not required**. All files are plain Markdown readable in any editor.
+
+---
+
 Every stored memory creates a Markdown file inside `vault/`.  
 Each file uses YAML frontmatter and Obsidian-style `[[wikilinks]]` to connect related notes.
 
