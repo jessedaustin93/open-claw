@@ -49,8 +49,8 @@ def local_time_string(
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=UTC)
     local_dt = dt.astimezone(ZoneInfo(timezone_name))
-    # %-I removes leading zero on Linux; adjust to %#I on Windows if needed.
-    return local_dt.strftime("%-I:%M %p %Z")
+    hour = local_dt.strftime("%I").lstrip("0") or "12"
+    return local_dt.strftime(f"{hour}:%M %p %Z")
 
 
 def local_date_time_string(
@@ -68,7 +68,8 @@ def local_date_time_string(
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=UTC)
     local_dt = dt.astimezone(ZoneInfo(timezone_name))
-    return local_dt.strftime("%Y-%m-%d %-I:%M %p %Z")
+    hour = local_dt.strftime("%I").lstrip("0") or "12"
+    return local_dt.strftime(f"%Y-%m-%d {hour}:%M %p %Z")
 
 
 def local_now_string(timezone_name: str = "America/New_York") -> str:
