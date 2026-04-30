@@ -21,6 +21,7 @@ from .tools import ToolDefinition, ToolRegistry
 
 FILE_READ = ToolDefinition(
     name="file_read",
+    approval_required=True,
     description=(
         "Read the text contents of a file at a given path. "
         "Supports optional line offset and line limit for large files. "
@@ -57,6 +58,7 @@ FILE_READ = ToolDefinition(
 
 FILE_WRITE = ToolDefinition(
     name="file_write",
+    approval_required=True,
     description=(
         "Write text content to a file at a given path, creating it if it does "
         "not exist. Supports overwrite and append modes. "
@@ -93,6 +95,7 @@ FILE_WRITE = ToolDefinition(
 
 COMMAND_PREVIEW = ToolDefinition(
     name="command_preview",
+    approval_required=True,
     description=(
         "Produce a structured, human-readable preview of a shell command and its "
         "expected effects — without executing it. The preview must be reviewed and "

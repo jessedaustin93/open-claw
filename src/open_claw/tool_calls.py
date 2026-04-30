@@ -66,17 +66,17 @@ class ToolCallStore:
         task_link = _wikilink("tasks",       task_id,       task_title)
 
         record: Dict = {
-            "id":                    call_id,
-            "tool_name":             tool_call["tool"],
-            "arguments":             tool_call.get("arguments", {}),
-            "matched_by":            tool_call.get("matched_by", "keyword"),
-            "simulation_id":         simulation_id,
-            "task_id":               task_id,
-            "task_title":            task_title,
-            "status":                "pending_review",
-            "requires_human_review": tool_call.get("requires_human_review", True),
-            "created_at":            now,
-            "source_links":          [sim_link, task_link],
+            "id":                call_id,
+            "tool_name":         tool_call["tool"],
+            "arguments":         tool_call.get("arguments", {}),
+            "matched_by":        tool_call.get("matched_by", "keyword"),
+            "simulation_id":     simulation_id,
+            "task_id":           task_id,
+            "task_title":        task_title,
+            "status":            "pending_review",
+            "approval_required": tool_call.get("approval_required", True),
+            "created_at":        now,
+            "source_links":      [sim_link, task_link],
         }
 
         (self.config.memory_path / "tool_calls" / f"{call_id}.json").write_text(
@@ -146,7 +146,8 @@ class ToolCallStore:
             f"# Tool Call — {record['tool_name']}\n\n"
             f"**Created:** {local_ts}\n\n"
             f"**Tool:** `{record['tool_name']}`  |  "
-            f"**Status:** `{record['status']}`\n\n"
+            f"**Status:** `{record['status']}`  |  "
+            f"**Approval Required:** `{record['approval_required']}`\n\n"
             f"## Arguments\n\n```json\n{args_json}\n```\n\n"
             f"## Traceability\n\n"
             f"**Simulation:** {sim_link}\n\n"

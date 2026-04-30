@@ -63,12 +63,12 @@ def _make_task(cfg: Config, description: str) -> dict:
     return task
 
 
-def _fake_tool_call(tool: str = "file_read") -> dict:
+def _fake_tool_call(tool: str = "file_read", approval_required: bool = True) -> dict:
     return {
-        "tool":                  tool,
-        "arguments":             {"path": "config.json"},
-        "matched_by":            "keyword",
-        "requires_human_review": True,
+        "tool":               tool,
+        "arguments":          {"path": "config.json"},
+        "matched_by":         "keyword",
+        "approval_required":  approval_required,
     }
 
 
@@ -121,9 +121,29 @@ def test_create_status_is_pending_review(store):
     assert r["status"] == "pending_review"
 
 
-def test_create_has_requires_human_review(store):
+def test_create_has_approval_required(store):
     r = store.create(_fake_tool_call(), "sim-1", "task-1", "My Task")
-    assert r["requires_human_review"] is True
+    assert r["approval_required"] is True
+
+
+def test_approval_required_false_stored_correctly(store):
+    r = store.create(_fake_tool_call(approval_required=False), "sim-1", "task-1", "My Task")
+    assert r["approval_required"] is False
+
+
+def test_approval_required_in_json_file(store, cfg):
+    r = store.create(_fake_tool_call(), "sim-1", "task-1", "My Task")
+    data = json.loads(
+        (cfg.memory_path / "tool_calls" / f"{r['id']}.json").read_text(encoding="utf-8")
+    )
+    assert "approval_required" in data
+    assert data["approval_required"] is True
+
+
+def test_approval_required_in_markdown(store, cfg):
+    r = store.create(_fake_tool_call(), "sim-1", "task-1", "My Task")
+    md = (cfg.vault_path / "tool_calls" / f"{r['id']}.md").read_text(encoding="utf-8")
+    assert "Approval Required" in md
 
 
 def test_create_has_created_at(store):

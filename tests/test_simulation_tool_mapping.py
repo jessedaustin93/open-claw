@@ -187,9 +187,9 @@ def test_no_match_when_tool_is_disabled(cfg):
 # tool_call structure
 # ---------------------------------------------------------------------------
 
-def test_tool_call_requires_human_review(cfg_with_tools):
+def test_tool_call_approval_required(cfg_with_tools):
     result = _match_tool_call("Read the config.json file.", cfg_with_tools)
-    assert result["requires_human_review"] is True
+    assert result["approval_required"] is True
 
 
 def test_tool_call_matched_by_keyword(cfg_with_tools):
@@ -200,6 +200,26 @@ def test_tool_call_matched_by_keyword(cfg_with_tools):
 def test_tool_call_arguments_is_dict(cfg_with_tools):
     result = _match_tool_call("Read the config.json file.", cfg_with_tools)
     assert isinstance(result["arguments"], dict)
+
+
+def test_approval_required_propagated_from_tool_definition(cfg_with_tools):
+    result = _match_tool_call("Read the config.json file.", cfg_with_tools)
+    assert "approval_required" in result
+    assert result["approval_required"] is True
+
+
+def test_approval_required_false_when_tool_definition_says_false(cfg):
+    registry = ToolRegistry(cfg)
+    registry.register(ToolDefinition(
+        name="file_read",
+        description="Read a file.",
+        tags=["file"],
+        layer=5,
+        approval_required=False,
+    ))
+    result = _match_tool_call("Read the config.json file.", cfg)
+    assert result is not None
+    assert result["approval_required"] is False
 
 
 # ---------------------------------------------------------------------------

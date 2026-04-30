@@ -40,7 +40,7 @@ class ToolDefinition:
 
     __slots__ = (
         "name", "description", "parameters",
-        "tags", "layer", "enabled", "registered_at",
+        "tags", "layer", "enabled", "approval_required", "registered_at",
     )
 
     def __init__(
@@ -51,6 +51,7 @@ class ToolDefinition:
         tags: Optional[List[str]] = None,
         layer: int = 0,
         enabled: bool = True,
+        approval_required: bool = True,
         registered_at: Optional[str] = None,
     ):
         if not name or not name.strip():
@@ -65,17 +66,19 @@ class ToolDefinition:
         self.tags: List[str] = list(tags or [])
         self.layer: int = layer
         self.enabled: bool = enabled
+        self.approval_required: bool = approval_required
         self.registered_at: str = registered_at or utc_now_iso()
 
     def to_dict(self) -> Dict:
         return {
-            "name":          self.name,
-            "description":   self.description,
-            "parameters":    self.parameters,
-            "tags":          self.tags,
-            "layer":         self.layer,
-            "enabled":       self.enabled,
-            "registered_at": self.registered_at,
+            "name":              self.name,
+            "description":       self.description,
+            "parameters":        self.parameters,
+            "tags":              self.tags,
+            "layer":             self.layer,
+            "enabled":           self.enabled,
+            "approval_required": self.approval_required,
+            "registered_at":     self.registered_at,
         }
 
     @classmethod
@@ -87,6 +90,7 @@ class ToolDefinition:
             tags=data.get("tags", []),
             layer=data.get("layer", 0),
             enabled=data.get("enabled", True),
+            approval_required=data.get("approval_required", True),
             registered_at=data.get("registered_at"),
         )
 
@@ -192,6 +196,7 @@ class ToolRegistry:
             f"type: tool_definition",
             f"layer: {tool.layer}",
             f"enabled: {str(tool.enabled).lower()}",
+            f"approval_required: {str(tool.approval_required).lower()}",
             f"registered_at: {tool.registered_at}",
             "tags:",
         ]
@@ -205,7 +210,8 @@ class ToolRegistry:
         body = (
             f"# Tool: {tool.name}\n\n"
             f"**Registered:** {local_ts}\n\n"
-            f"**Layer:** {tool.layer}  |  **Enabled:** `{tool.enabled}`\n\n"
+            f"**Layer:** {tool.layer}  |  **Enabled:** `{tool.enabled}`  |  "
+            f"**Approval Required:** `{tool.approval_required}`\n\n"
             f"## Description\n\n{tool.description}\n\n"
             f"## Parameters\n\n```json\n{params_json}\n```\n\n"
             "> **DEFINITION ONLY** — this registry never calls or executes tools.\n\n"

@@ -231,11 +231,12 @@ def _match_tool_call(description: str, config: Config) -> Optional[Dict]:
     if best_name is None:
         return None
 
+    tool = registry.get(best_name)
     return {
-        "tool":                  best_name,
-        "arguments":             _extract_arguments(description, best_name),
-        "matched_by":            "keyword",
-        "requires_human_review": True,
+        "tool":               best_name,
+        "arguments":          _extract_arguments(description, best_name),
+        "matched_by":         "keyword",
+        "approval_required":  tool.approval_required,
     }
 
 

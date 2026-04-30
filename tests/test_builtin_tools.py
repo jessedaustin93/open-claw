@@ -118,6 +118,10 @@ def test_file_read_enabled_by_default():
     assert FILE_READ.enabled is True
 
 
+def test_file_read_approval_required():
+    assert FILE_READ.approval_required is True
+
+
 # ---------------------------------------------------------------------------
 # FILE_WRITE schema
 # ---------------------------------------------------------------------------
@@ -161,6 +165,10 @@ def test_file_write_has_encoding():
 
 def test_file_write_enabled_by_default():
     assert FILE_WRITE.enabled is True
+
+
+def test_file_write_approval_required():
+    assert FILE_WRITE.approval_required is True
 
 
 # ---------------------------------------------------------------------------
@@ -214,6 +222,10 @@ def test_command_preview_description_mentions_no_execution():
 
 def test_command_preview_enabled_by_default():
     assert COMMAND_PREVIEW.enabled is True
+
+
+def test_command_preview_approval_required():
+    assert COMMAND_PREVIEW.approval_required is True
 
 
 # ---------------------------------------------------------------------------

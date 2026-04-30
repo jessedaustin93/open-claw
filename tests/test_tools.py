@@ -136,9 +136,43 @@ def test_tool_definition_whitespace_stripped():
     assert td.description == "Desc"
 
 
+def test_approval_required_default_true():
+    td = ToolDefinition(name="t", description="d")
+    assert td.approval_required is True
+
+
+def test_approval_required_can_be_false():
+    td = ToolDefinition(name="t", description="d", approval_required=False)
+    assert td.approval_required is False
+
+
+def test_approval_required_in_to_dict():
+    td = ToolDefinition(name="t", description="d", approval_required=False)
+    assert td.to_dict()["approval_required"] is False
+
+
+def test_approval_required_roundtrip():
+    td = ToolDefinition(name="t", description="d", approval_required=False)
+    restored = ToolDefinition.from_dict(td.to_dict())
+    assert restored.approval_required is False
+
+
+def test_approval_required_defaults_true_when_missing_from_dict():
+    data = {"name": "t", "description": "d"}
+    td = ToolDefinition.from_dict(data)
+    assert td.approval_required is True
+
+
 # ---------------------------------------------------------------------------
 # ToolRegistry — register
 # ---------------------------------------------------------------------------
+
+def test_register_markdown_includes_approval_required(registry, cfg):
+    registry.register(_simple_tool())
+    md = (cfg.vault_path / "agents" / "search_memory.md").read_text(encoding="utf-8")
+    assert "approval_required:" in md
+    assert "Approval Required" in md
+
 
 def test_register_creates_json_file(registry, cfg):
     tool = _simple_tool()
