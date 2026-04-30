@@ -1,4 +1,4 @@
-"""Write agent for Open-Claw Layer 7.
+"""Write agent for Aeon-V1 Layer 7.
 
 WriteAgent is the ONLY component permitted to commit proposals into the
 persistent memory system. It operates exclusively on proposals whose

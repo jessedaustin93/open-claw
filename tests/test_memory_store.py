@@ -1,5 +1,5 @@
 """
-Open-Claw test suite — Layer 1 stabilization.
+Aeon-V1 test suite — Layer 1 stabilization.
 
 Guarantees proven:
 - Raw memory is written verbatim and is immutable (append-only)
@@ -22,8 +22,8 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from open_claw import Config, ingest, reflect, search
-from open_claw.memory_store import _score_importance
+from aeon_v1 import Config, ingest, reflect, search
+from aeon_v1.memory_store import _score_importance
 
 
 @pytest.fixture
@@ -326,8 +326,8 @@ def test_core_not_modified_by_reflect(cfg):
 
 def test_direct_core_write_raises_error(cfg):
     """_write_markdown must raise CoreMemoryProtectedError when targeting vault/core/."""
-    from open_claw.exceptions import CoreMemoryProtectedError
-    from open_claw.memory_store import _write_markdown
+    from aeon_v1.exceptions import CoreMemoryProtectedError
+    from aeon_v1.memory_store import _write_markdown
 
     core_path = cfg.vault_path / "core" / "should-not-exist.md"
 
@@ -339,7 +339,7 @@ def test_direct_core_write_raises_error(cfg):
 
 def test_linker_skips_core_vault_files(cfg):
     """linker._update_markdown_links must leave vault/core/ files untouched."""
-    from open_claw.linker import _update_markdown_links
+    from aeon_v1.linker import _update_markdown_links
 
     # Create a file in vault/core/ that has content which would be altered by link injection
     core_dir = cfg.vault_path / "core"
@@ -486,7 +486,7 @@ def test_confidence_higher_with_more_sources(cfg):
     # just ingest more varied content so tag diversity increases.
     import tempfile
     from pathlib import Path
-    from open_claw import Config
+    from aeon_v1 import Config
     tmp2 = Path(tempfile.mkdtemp())
     cfg_many = Config(base_path=tmp2)
     for text in [

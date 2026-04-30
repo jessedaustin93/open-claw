@@ -1,4 +1,4 @@
-"""Timestamp utilities for Open-Claw.
+"""Timestamp utilities for Aeon-V1.
 
 Strategy
 --------

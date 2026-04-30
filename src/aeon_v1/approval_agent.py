@@ -1,4 +1,4 @@
-"""Human approval gate for Open-Claw Layer 7.
+"""Human approval gate for Aeon-V1 Layer 7.
 
 AuthProvider is the pluggable authentication interface. CLIAuthProvider is the
 default — it reads yes/no from stdin. To add a dedicated hardware token, TOTP
@@ -77,7 +77,7 @@ class CLIAuthProvider(AuthProvider):
     def request_approval(self, prompt: str, context: Dict) -> Tuple[bool, str]:
         border = "=" * 62
         print(f"\n{border}")
-        print("  OPEN-CLAW  —  MEMORY WRITE APPROVAL REQUEST")
+        print("  AEON-V1  —  MEMORY WRITE APPROVAL REQUEST")
         print(border)
         print(f"  Trace ID    : {context.get('trace_id', 'unknown')}")
         print(f"  Proposed by : {context.get('proposed_by', 'unknown')}")

@@ -21,16 +21,16 @@ from pathlib import Path
 
 import pytest
 
-from open_claw import Config, register_builtin_tools, FILE_READ, FILE_WRITE, COMMAND_PREVIEW
-from open_claw.simulate import (
+from aeon_v1 import Config, register_builtin_tools, FILE_READ, FILE_WRITE, COMMAND_PREVIEW
+from aeon_v1.simulate import (
     SimulationStore,
     _extract_command,
     _extract_path,
     _match_tool_call,
     simulate_action,
 )
-from open_claw.tasks import TaskStore
-from open_claw.tools import ToolDefinition, ToolRegistry
+from aeon_v1.tasks import TaskStore
+from aeon_v1.tools import ToolDefinition, ToolRegistry
 
 
 # ---------------------------------------------------------------------------

@@ -1,5 +1,5 @@
 """
-Open-Claw test suite — Layer 3: Decision and Action Simulation.
+Aeon-V1 test suite — Layer 3: Decision and Action Simulation.
 
 Guarantees proven:
 - Tasks are created from reflection suggested_tasks
@@ -21,10 +21,10 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from open_claw import Config, ingest, reflect
-from open_claw.decision import DecisionStore, select_next_task
-from open_claw.simulate import SimulationStore, simulate_action
-from open_claw.tasks import TaskStore, create_tasks_from_reflection
+from aeon_v1 import Config, ingest, reflect
+from aeon_v1.decision import DecisionStore, select_next_task
+from aeon_v1.simulate import SimulationStore, simulate_action
+from aeon_v1.tasks import TaskStore, create_tasks_from_reflection
 
 
 @pytest.fixture
@@ -293,7 +293,7 @@ def test_simulation_creates_json_and_markdown(cfg_with_reflection):
 
 def test_simulation_does_not_execute_commands(cfg_with_reflection):
     """simulate.py must not import subprocess, os.system, or any execution primitive."""
-    import open_claw.simulate as sim_module
+    import aeon_v1.simulate as sim_module
     import ast, inspect
 
     source = inspect.getsource(sim_module)

@@ -3,7 +3,7 @@ import json
 import pytest
 from pathlib import Path
 
-from open_claw import (
+from aeon_v1 import (
     ApprovalAgent,
     AuditLog,
     AuthProvider,
@@ -15,7 +15,7 @@ from open_claw import (
     WriteAgent,
     create_proposal,
 )
-from open_claw.manifest_agent import _normalise, _validate_tool_entry, MANIFEST_PATH
+from aeon_v1.manifest_agent import _normalise, _validate_tool_entry, MANIFEST_PATH
 
 
 # ---------------------------------------------------------------------------
@@ -156,10 +156,10 @@ class TestScanImports:
         assert "pathlib" not in imports
 
     def test_excludes_own_package(self, cfg):
-        _write_py_file(cfg, "from open_claw import Config\n")
+        _write_py_file(cfg, "from aeon_v1 import Config\n")
         agent = ManifestAgent(cfg)
         imports = agent.scan_imports()
-        assert "open_claw" not in imports
+        assert "aeon_v1" not in imports
 
     def test_from_import(self, cfg):
         _write_py_file(cfg, "from anthropic import Anthropic\n")
@@ -448,8 +448,8 @@ class TestProposeToolAddition:
         )
 
     def test_tool_addition_type_accepted_by_schema(self):
-        from open_claw import validate_staging_proposal
-        from open_claw.time_utils import utc_now_iso
+        from aeon_v1 import validate_staging_proposal
+        from aeon_v1.time_utils import utc_now_iso
         proposal = {
             "trace_id":    "t1",
             "proposed_by": "agent",
@@ -469,13 +469,13 @@ class TestProposeToolAddition:
 
 class TestExports:
     def test_manifest_agent_exported(self):
-        from open_claw import ManifestAgent
+        from aeon_v1 import ManifestAgent
         assert callable(ManifestAgent)
 
     def test_drift_report_exported(self):
-        from open_claw import DriftReport
+        from aeon_v1 import DriftReport
         assert callable(DriftReport)
 
     def test_tool_addition_store_exported(self):
-        from open_claw import ToolAdditionStore
+        from aeon_v1 import ToolAdditionStore
         assert callable(ToolAdditionStore)

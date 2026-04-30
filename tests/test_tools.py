@@ -17,10 +17,10 @@ from pathlib import Path
 
 import pytest
 
-from open_claw import Config, ToolAlreadyRegisteredError, ToolDefinition, ToolRegistry
+from aeon_v1 import Config, ToolAlreadyRegisteredError, ToolDefinition, ToolRegistry
 
 
-SRC_DIR = Path(__file__).parent.parent / "src" / "open_claw"
+SRC_DIR = Path(__file__).parent.parent / "src" / "aeon_v1"
 
 
 # ---------------------------------------------------------------------------

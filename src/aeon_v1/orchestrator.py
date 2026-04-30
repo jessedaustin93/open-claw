@@ -1,4 +1,4 @@
-"""Orchestrator for Open-Claw Layer 6.
+"""Orchestrator for Aeon-V1 Layer 6.
 
 The Orchestrator manages a pool of persistent AgentNodes and spawns
 task-specific agents on demand. From the outside it is the single

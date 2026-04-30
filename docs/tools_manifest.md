@@ -1,4 +1,4 @@
-# Open-Claw — Tools & Requirements Reference
+# Aeon-V1 — Tools & Requirements Reference
 
 **Purpose:** Human reference only. This file is never imported or executed by the system.
 **Rule:** Do not delete entries. Future updates append or modify; note the reason inline.
@@ -11,14 +11,14 @@ Each entry lists:
 - **Purpose** — what it does *inside this system specifically*
 - **Importance** — `Required` · `Optional` · `Experimental` · `Planned`
 - **Link** — official download or best source
-- **Notes** — why this choice matters for Open-Claw
+- **Notes** — why this choice matters for Aeon-V1
 
 ---
 
 ## 1. Core System Tools
 
 ### Python 3.10+
-- **Purpose:** Runtime for all Open-Claw modules (ingest, reflect, simulate, orchestrator, Layer 7 security)
+- **Purpose:** Runtime for all Aeon-V1 modules (ingest, reflect, simulate, orchestrator, Layer 7 security)
 - **Importance:** Required
 - **Link:** https://www.python.org/downloads/
 - **Notes:** 3.10 minimum for `match` statements and `zoneinfo` stdlib. 3.11+ preferred for faster startup and better error messages. Must NOT be 2.x.
@@ -63,7 +63,7 @@ Each entry lists:
 - **Purpose:** Optional LLM enhancement for reflection narrative (sections 1/3/4/5) and simulation planning. All sections fall back to rule-based output if unavailable.
 - **Importance:** Optional
 - **Link:** https://pypi.org/project/anthropic/
-- **Notes:** Soft dependency — the system runs fully without it. Install with `pip install anthropic`. Enable via `OPENCLAW_LLM=1` environment variable + `ANTHROPIC_API_KEY`.
+- **Notes:** Soft dependency — the system runs fully without it. Install with `pip install anthropic`. Enable via `AEON_V1_LLM=1` environment variable + `ANTHROPIC_API_KEY`.
 
 ---
 
@@ -112,7 +112,7 @@ Each entry lists:
 ### GitHub / GitHub Actions
 - **Purpose:** Remote repository hosting and future CI/CD (automated test runs on push)
 - **Importance:** Required (for team use) / Optional (solo local)
-- **Link:** https://github.com/jessedaustin93/open-claw
+- **Link:** https://github.com/jessedaustin93/aeon-v1
 - **Notes:** CI is not yet configured. Recommended: add a GitHub Actions workflow that runs `pytest tests/ -q` on every push to main. Badge in README is a good next step.
 
 ---
@@ -128,7 +128,7 @@ Each entry lists:
 ## 4. Hardware Components
 
 ### Development Machine (any)
-- **Purpose:** Run Open-Claw locally — ingestion, reflection, simulation, orchestrator ticks
+- **Purpose:** Run Aeon-V1 locally — ingestion, reflection, simulation, orchestrator ticks
 - **Importance:** Required
 - **Link:** N/A
 - **Notes:** No GPU required for rule-based mode. If local LLM inference is added (see Ollama above), a machine with 8–16 GB RAM minimum is recommended for 7B-parameter models. ARM (Apple Silicon, Raspberry Pi 5) and x86 both supported.
@@ -196,7 +196,7 @@ Each entry lists:
 ---
 
 ### Anthropic API (remote)
-- **Purpose:** LLM inference when `OPENCLAW_LLM=1` is set
+- **Purpose:** LLM inference when `AEON_V1_LLM=1` is set
 - **Importance:** Optional
 - **Link:** https://api.anthropic.com/
 - **Notes:** The only external network dependency in the current system. The system degrades gracefully (rule-based fallback) if this is unreachable. Monitor usage at https://console.anthropic.com/.
@@ -233,7 +233,7 @@ Each entry lists:
 - **Purpose:** Keep the Orchestrator running continuously and restart it automatically on crash or reboot
 - **Importance:** Planned
 - **Link:** https://www.freedesktop.org/wiki/Software/systemd/
-- **Notes:** A simple `open-claw-orchestrator.service` unit file wrapping a Python script that calls `Orchestrator(config).tick()` in a loop with a configurable sleep interval. On macOS, a `launchd` plist achieves the same.
+- **Notes:** A simple `aeon-v1-orchestrator.service` unit file wrapping a Python script that calls `Orchestrator(config).tick()` in a loop with a configurable sleep interval. On macOS, a `launchd` plist achieves the same.
 
 ---
 

@@ -1,4 +1,4 @@
-# Open-Claw Memory Model
+# Aeon-V1 Memory Model
 
 ## Design Principles
 

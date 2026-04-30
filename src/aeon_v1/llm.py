@@ -1,6 +1,6 @@
-"""Optional LLM adapter for Open-Claw Layer 4.
+"""Optional LLM adapter for Aeon-V1 Layer 4.
 
-anthropic is NOT a hard dependency. Open-Claw works fully without it.
+anthropic is NOT a hard dependency. Aeon-V1 works fully without it.
 generate_text() returns None whenever LLM is disabled, the API key is
 missing, or any error occurs — callers always fall back to rule-based behavior.
 
@@ -8,7 +8,7 @@ Optional install:
     pip install anthropic
 
 Environment variables:
-    OPENCLAW_LLM=1            — enable LLM (also readable via Config.llm_enabled)
+    AEON_V1_LLM=1            — enable LLM (also readable via Config.llm_enabled)
     ANTHROPIC_API_KEY=<key>   — required when provider is "anthropic"
 """
 import os
@@ -23,7 +23,7 @@ def generate_text(prompt: str, config: Optional[Config] = None) -> Optional[str]
 
     Args:
         prompt: The full prompt to send.
-        config: Open-Claw Config — defaults to Config() if None.
+        config: Aeon-V1 Config — defaults to Config() if None.
 
     Returns:
         Response string, or None if LLM is disabled / unavailable / errored.

@@ -1,4 +1,4 @@
-# Open-Claw Integration Status
+# Aeon-V1 Integration Status
 
 This document describes what is implemented, what is planned, and where future
 integrations plug in. It is the source of truth for contributors picking up the project.
@@ -72,7 +72,7 @@ simulate_action(task)
 
 ### Architecture
 
-LLM support is handled by `src/open_claw/llm.py`. It is an **optional adapter** —
+LLM support is handled by `src/aeon_v1/llm.py`. It is an **optional adapter** —
 the system works fully without it and without the `anthropic` package installed.
 
 ```
@@ -89,11 +89,11 @@ llm.py
 
 ```bash
 # Linux / macOS
-export OPENCLAW_LLM=1
+export AEON_V1_LLM=1
 export ANTHROPIC_API_KEY=your_key_here
 
 # PowerShell
-$env:OPENCLAW_LLM="1"
+$env:AEON_V1_LLM="1"
 $env:ANTHROPIC_API_KEY="your_key_here"
 ```
 
@@ -115,7 +115,7 @@ pip install anthropic
 - Remove the core memory warning block (section 6 is always rule-based)
 - Execute commands or trigger real actions
 - Override `source_ids` or stored metadata
-- Become the memory authority (all records are written from Open-Claw's own code)
+- Become the memory authority (all records are written from Aeon-V1's own code)
 
 ### Metadata added to JSON records
 
@@ -136,8 +136,8 @@ These are `false` / `null` when LLM is disabled or unavailable.
 ## File Layout
 
 ```
-Open-Claw/
-  src/open_claw/          Python package
+Aeon-V1/
+  src/aeon_v1/          Python package
     config.py             Paths, tunable parameters, LLM config
     memory_store.py       Read/write all memory layers (JSON + Markdown)
     ingest.py             Raw → episodic → semantic promotion logic

@@ -1,4 +1,4 @@
-"""Built-in tool schema definitions for Open-Claw Layer 5.
+"""Built-in tool schema definitions for Aeon-V1 Layer 5.
 
 Defines ToolDefinition records for the three core tool slots:
   FILE_READ       — describe reading a file

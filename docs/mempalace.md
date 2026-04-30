@@ -1,11 +1,11 @@
-# MemPalace-Style Memory in Open-Claw
+# MemPalace-Style Memory in Aeon-V1
 
-Open-Claw's memory architecture is inspired by the **Memory Palace** (Method of Loci)
+Aeon-V1's memory architecture is inspired by the **Memory Palace** (Method of Loci)
 mnemonic technique and append-only log design patterns.
 
-> **MemPalace is not a software dependency.** Open-Claw does not import, vendor,
+> **MemPalace is not a software dependency.** Aeon-V1 does not import, vendor,
 > or require any library called "MemPalace". The term describes a design philosophy
-> implemented entirely within Open-Claw's own code.
+> implemented entirely within Aeon-V1's own code.
 
 ---
 
@@ -14,9 +14,9 @@ mnemonic technique and append-only log design patterns.
 In a classical memory palace, each piece of knowledge has a **specific, fixed location**.
 You never erase a location — you add new rooms or update your mental map of what is there.
 
-Open-Claw applies this to structured file storage:
+Aeon-V1 applies this to structured file storage:
 
-| MemPalace idea | Open-Claw implementation |
+| MemPalace idea | Aeon-V1 implementation |
 |---|---|
 | Each memory has a fixed place | Each record has a permanent `id` used as the filename |
 | You never erase a memory location | Raw records are **immutable** — never overwritten or deleted |
@@ -34,7 +34,7 @@ Every `ingest()` call writes exactly one raw memory and never modifies it afterw
 
 ```python
 raw = store.store_raw(text, source=source)
-# raw is now immutable — no function in Open-Claw overwrites it
+# raw is now immutable — no function in Aeon-V1 overwrites it
 ```
 
 The `_guard_core_path()` function in `memory_store.py` enforces the same protection

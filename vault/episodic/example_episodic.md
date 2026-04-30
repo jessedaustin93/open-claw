@@ -18,6 +18,6 @@ links:
 
 **Source:** [[raw/example_raw]]
 
-**What happened:** During initial design of Open-Claw, the decision was made to preserve all raw inputs immutably and derive episodic and semantic layers on top rather than overwriting them. This establishes the append-only memory principle.
+**What happened:** During initial design of Aeon-V1, the decision was made to preserve all raw inputs immutably and derive episodic and semantic layers on top rather than overwriting them. This establishes the append-only memory principle.
 
 [[Episodic Memory]] | [[Semantic Memory]] | [[Reflections]]

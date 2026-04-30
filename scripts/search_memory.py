@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
-"""Search Open-Claw memory for a keyword or phrase."""
+"""Search Aeon-V1 memory for a keyword or phrase."""
 import argparse
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from open_claw import Config, search
+from aeon_v1 import Config, search
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Search Open-Claw memory by keyword.",
+        description="Search Aeon-V1 memory by keyword.",
         epilog='Example:\n  python scripts/search_memory.py "recursive learning"',
     )
     parser.add_argument("query", help="Search query (keyword or phrase)")

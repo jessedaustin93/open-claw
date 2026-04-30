@@ -7,12 +7,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from open_claw import Config, ingest
+from aeon_v1 import Config, ingest
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Ingest text into the Open-Claw memory system.",
+        description="Ingest text into the Aeon-V1 memory system.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:

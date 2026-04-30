@@ -18,13 +18,13 @@ from pathlib import Path
 
 import pytest
 
-from open_claw import Config, ToolCallStore, register_builtin_tools
-from open_claw.simulate import simulate_action
-from open_claw.tasks import TaskStore
-from open_claw.tools import ToolRegistry
+from aeon_v1 import Config, ToolCallStore, register_builtin_tools
+from aeon_v1.simulate import simulate_action
+from aeon_v1.tasks import TaskStore
+from aeon_v1.tools import ToolRegistry
 
 
-SRC_DIR = Path(__file__).parent.parent / "src" / "open_claw"
+SRC_DIR = Path(__file__).parent.parent / "src" / "aeon_v1"
 
 
 # ---------------------------------------------------------------------------

@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pytest
 
-from open_claw import (
+from aeon_v1 import (
     BUILTIN_TOOLS,
     COMMAND_PREVIEW,
     Config,
@@ -26,7 +26,7 @@ from open_claw import (
 )
 
 
-SRC_DIR = Path(__file__).parent.parent / "src" / "open_claw"
+SRC_DIR = Path(__file__).parent.parent / "src" / "aeon_v1"
 
 
 # ---------------------------------------------------------------------------

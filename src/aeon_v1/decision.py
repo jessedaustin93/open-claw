@@ -1,4 +1,4 @@
-"""Decision engine for Open-Claw Layer 3.
+"""Decision engine for Aeon-V1 Layer 3.
 
 select_next_task() scores pending tasks, picks the best one, marks it
 as selected, and writes an append-only decision record.

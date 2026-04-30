@@ -1,4 +1,4 @@
-"""Tests for timestamp handling across Open-Claw.
+"""Tests for timestamp handling across Aeon-V1.
 
 Spec:
 - No datetime.utcnow() remains in source files.
@@ -16,8 +16,8 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
-from open_claw import Config, MemoryStore, ingest, reflect
-from open_claw.time_utils import (
+from aeon_v1 import Config, MemoryStore, ingest, reflect
+from aeon_v1.time_utils import (
     local_date_time_string,
     local_now_string,
     local_time_string,
@@ -30,7 +30,7 @@ from open_claw.time_utils import (
 # Source-code audit
 # ---------------------------------------------------------------------------
 
-SRC_DIR = Path(__file__).parent.parent / "src" / "open_claw"
+SRC_DIR = Path(__file__).parent.parent / "src" / "aeon_v1"
 
 
 def _python_files():

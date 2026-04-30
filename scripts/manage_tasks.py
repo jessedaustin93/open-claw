@@ -18,10 +18,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from open_claw import Config
-from open_claw.decision import select_next_task
-from open_claw.simulate import simulate_action
-from open_claw.tasks import TaskStore
+from aeon_v1 import Config
+from aeon_v1.decision import select_next_task
+from aeon_v1.simulate import simulate_action
+from aeon_v1.tasks import TaskStore
 
 
 def cmd_tasks(config: Config) -> None:

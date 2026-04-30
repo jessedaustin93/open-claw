@@ -34,8 +34,8 @@ class Config:
         # Layer 6 — orchestrator / agent pool
         self.max_thinking_agents: int = 10
         # Layer 4 — optional LLM reasoning
-        # Toggle via OPENCLAW_LLM=1 environment variable or set directly.
-        self.llm_enabled: bool = os.environ.get("OPENCLAW_LLM", "0").strip() == "1"
+        # Toggle via AEON_V1_LLM=1 environment variable or set directly.
+        self.llm_enabled: bool = os.environ.get("AEON_V1_LLM", "0").strip() == "1"
         self.llm_provider: str = "anthropic"
         self.llm_model: str = "claude-3-5-sonnet-latest"
         self.llm_temperature: float = 0.2

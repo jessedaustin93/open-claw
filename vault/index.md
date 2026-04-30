@@ -1,12 +1,12 @@
 ---
-title: Open-Claw Memory Vault
+title: Aeon-V1 Memory Vault
 type: index
 created: 2026-04-29T00:00:00+00:00
 ---
 
-# Open-Claw Memory Vault
+# Aeon-V1 Memory Vault
 
-Welcome to the Open-Claw knowledge graph.
+Welcome to the Aeon-V1 knowledge graph.
 
 **To explore the graph view, backlinks, and tag search: open this `vault/` folder in Obsidian.**  
 Obsidian is optional — all files are plain Markdown readable in any editor.

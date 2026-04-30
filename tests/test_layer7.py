@@ -12,7 +12,7 @@ import json
 import pytest
 from pathlib import Path
 
-from open_claw import (
+from aeon_v1 import (
     ApprovalAgent,
     AuditLog,
     AuthProvider,
@@ -32,7 +32,7 @@ from open_claw import (
     validate_audit_entry,
     validate_staging_proposal,
 )
-from open_claw.time_utils import utc_now_iso
+from aeon_v1.time_utils import utc_now_iso
 
 
 # ---------------------------------------------------------------------------
@@ -755,7 +755,7 @@ class TestFullPipeline:
 class TestSecurityInvariants:
     def test_no_execution_primitives_in_security(self):
         import ast, inspect
-        import open_claw.security as mod
+        import aeon_v1.security as mod
         tree = ast.parse(inspect.getsource(mod))
         banned = {"subprocess", "os.system", "os.popen", "eval", "exec", "__import__"}
         imports = {
@@ -768,7 +768,7 @@ class TestSecurityInvariants:
 
     def test_no_execution_primitives_in_write_agent(self):
         import ast, inspect
-        import open_claw.write_agent as mod
+        import aeon_v1.write_agent as mod
         tree = ast.parse(inspect.getsource(mod))
         for node in ast.walk(tree):
             if isinstance(node, ast.Call):
@@ -793,17 +793,17 @@ class TestSecurityInvariants:
         assert isinstance(ok, bool)   # structural: validate always returns bool
 
     def test_write_agent_exports(self):
-        from open_claw import WriteAgent, create_proposal
+        from aeon_v1 import WriteAgent, create_proposal
         assert callable(WriteAgent)
         assert callable(create_proposal)
 
     def test_approval_agent_exports(self):
-        from open_claw import ApprovalAgent, AuthProvider, CLIAuthProvider
+        from aeon_v1 import ApprovalAgent, AuthProvider, CLIAuthProvider
         assert issubclass(CLIAuthProvider, AuthProvider)
         assert callable(ApprovalAgent)
 
     def test_security_exports(self):
-        from open_claw import PathGuard, SecurityError, ValidationAgent, AuditLog
+        from aeon_v1 import PathGuard, SecurityError, ValidationAgent, AuditLog
         assert callable(PathGuard)
         assert issubclass(SecurityError, Exception)
         assert callable(ValidationAgent)

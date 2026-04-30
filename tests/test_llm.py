@@ -1,7 +1,7 @@
 """Tests for Layer 4 — optional LLM reasoning integration.
 
 Coverage:
-- Config defaults and OPENCLAW_LLM env toggle
+- Config defaults and AEON_V1_LLM env toggle
 - generate_text returns None when disabled
 - generate_text returns None when API key missing (even if enabled)
 - Reflection fallback: full rule-based path works without LLM
@@ -21,36 +21,36 @@ from unittest.mock import patch
 
 import pytest
 
-from open_claw import Config, generate_text, ingest, reflect, simulate_action
-from open_claw.llm import (
+from aeon_v1 import Config, generate_text, ingest, reflect, simulate_action
+from aeon_v1.llm import (
     build_reflection_prompt,
     build_simulation_prompt,
     parse_reflection_sections,
     parse_simulation_sections,
 )
-from open_claw.tasks import TaskStore
+from aeon_v1.tasks import TaskStore
 
 
-SRC_DIR = Path(__file__).parent.parent / "src" / "open_claw"
+SRC_DIR = Path(__file__).parent.parent / "src" / "aeon_v1"
 
 # ---------------------------------------------------------------------------
 # Config — LLM fields and env toggle
 # ---------------------------------------------------------------------------
 
 def test_llm_disabled_by_default(monkeypatch):
-    monkeypatch.delenv("OPENCLAW_LLM", raising=False)
+    monkeypatch.delenv("AEON_V1_LLM", raising=False)
     cfg = Config()
     assert cfg.llm_enabled is False
 
 
 def test_llm_enabled_via_env(monkeypatch):
-    monkeypatch.setenv("OPENCLAW_LLM", "1")
+    monkeypatch.setenv("AEON_V1_LLM", "1")
     cfg = Config()
     assert cfg.llm_enabled is True
 
 
 def test_llm_env_zero_means_disabled(monkeypatch):
-    monkeypatch.setenv("OPENCLAW_LLM", "0")
+    monkeypatch.setenv("AEON_V1_LLM", "0")
     cfg = Config()
     assert cfg.llm_enabled is False
 
@@ -108,7 +108,7 @@ def test_generate_text_returns_none_on_api_error(monkeypatch):
     cfg = Config()
     cfg.llm_enabled = True
 
-    with patch("open_claw.llm._call_anthropic", return_value=None):
+    with patch("aeon_v1.llm._call_anthropic", return_value=None):
         result = generate_text("hello", cfg)
     assert result is None
 
@@ -289,7 +289,7 @@ def test_reflection_uses_mocked_llm_output(tmp_path):
         config=config,
     )
 
-    with patch("open_claw.reflect.generate_text", return_value=_MOCK_REFLECTION_LLM):
+    with patch("aeon_v1.reflect.generate_text", return_value=_MOCK_REFLECTION_LLM):
         result = reflect(config=config)
 
     ref = result["reflection"]
@@ -315,7 +315,7 @@ def test_reflection_llm_sections_2_6_7_always_rule_based(tmp_path):
         config=config,
     )
 
-    with patch("open_claw.reflect.generate_text", return_value=_MOCK_REFLECTION_LLM):
+    with patch("aeon_v1.reflect.generate_text", return_value=_MOCK_REFLECTION_LLM):
         result = reflect(config=config)
 
     content = result["reflection"]["content"]
@@ -335,7 +335,7 @@ def test_reflection_fallback_when_llm_returns_empty(tmp_path):
         config=config,
     )
 
-    with patch("open_claw.reflect.generate_text", return_value=""):
+    with patch("aeon_v1.reflect.generate_text", return_value=""):
         result = reflect(config=config)
 
     ref = result["reflection"]
@@ -404,7 +404,7 @@ def test_simulation_uses_mocked_llm_output(tmp_path):
     tasks = TaskStore(config).list_tasks()
     assert tasks
 
-    with patch("open_claw.simulate.generate_text", return_value=_MOCK_SIM_LLM):
+    with patch("aeon_v1.simulate.generate_text", return_value=_MOCK_SIM_LLM):
         result = simulate_action(tasks[0], config=config)
 
     sim = result["simulation"]
@@ -429,7 +429,7 @@ def test_simulation_always_requires_human_approval(tmp_path):
     reflect(config=config)
     tasks = TaskStore(config).list_tasks()
     assert tasks
-    with patch("open_claw.simulate.generate_text", return_value=_MOCK_SIM_LLM):
+    with patch("aeon_v1.simulate.generate_text", return_value=_MOCK_SIM_LLM):
         result = simulate_action(tasks[0], config=config)
     assert result["simulation"]["required_human_approval"] is True
 

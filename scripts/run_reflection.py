@@ -7,12 +7,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from open_claw import Config, reflect
+from aeon_v1 import Config, reflect
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Run the Open-Claw reflection engine.",
+        description="Run the Aeon-V1 reflection engine.",
         epilog="Example:\n  python scripts/run_reflection.py --base-path .",
     )
     parser.add_argument(

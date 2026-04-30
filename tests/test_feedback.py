@@ -17,9 +17,9 @@ from pathlib import Path
 
 import pytest
 
-from open_claw import Config, evaluate_simulation
-from open_claw.simulate import SimulationStore, simulate_action
-from open_claw.tasks import TaskStore
+from aeon_v1 import Config, evaluate_simulation
+from aeon_v1.simulate import SimulationStore, simulate_action
+from aeon_v1.tasks import TaskStore
 
 
 # ---------------------------------------------------------------------------

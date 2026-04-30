@@ -1,4 +1,4 @@
-"""Agent node for Open-Claw Layer 6.
+"""Agent node for Aeon-V1 Layer 6.
 
 Each AgentNode is a single-purpose unit with a defined lifecycle:
 

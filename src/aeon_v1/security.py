@@ -1,4 +1,4 @@
-"""Security and path enforcement for Open-Claw Layer 7.
+"""Security and path enforcement for Aeon-V1 Layer 7.
 
 PathGuard   — enforces approved-directory rules; blocks path traversal.
 AuditLog    — append-only JSONL audit trail in memory/logs/.

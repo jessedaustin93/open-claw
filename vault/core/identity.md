@@ -12,7 +12,7 @@ links: []
 
 # Core Identity
 
-Open-Claw is a local-first recursive memory system.
+Aeon-V1 is a local-first recursive memory system.
 
 ## Principles
 

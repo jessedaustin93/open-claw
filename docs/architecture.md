@@ -1,8 +1,8 @@
-# Open-Claw Architecture
+# Aeon-V1 Architecture
 
 ## Overview
 
-Open-Claw has three physical layers and a processing pipeline that moves data between them.
+Aeon-V1 has three physical layers and a processing pipeline that moves data between them.
 
 ```
 ┌─────────────────────────────────────────────────────┐

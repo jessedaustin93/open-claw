@@ -1,4 +1,4 @@
-"""Tool registry for Open-Claw Layer 5.
+"""Tool registry for Aeon-V1 Layer 5.
 
 ToolRegistry stores tool *definitions* only — names, descriptions, and
 parameter schemas. No tool is ever called, scheduled, or executed here.

@@ -1,4 +1,4 @@
-"""Tool call record storage for Open-Claw Layer 5.
+"""Tool call record storage for Aeon-V1 Layer 5.
 
 ToolCallStore persists every structured tool call produced by simulate_action()
 as its own record, with bidirectional links back to the originating simulation

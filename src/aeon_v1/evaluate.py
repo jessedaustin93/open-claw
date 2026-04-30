@@ -1,4 +1,4 @@
-"""Simulation evaluation engine for Open-Claw Layer 5.
+"""Simulation evaluation engine for Aeon-V1 Layer 5.
 
 evaluate_simulation() compares a simulation's expected_outcome against an
 observed result string, scores the match, and writes the evaluation as a

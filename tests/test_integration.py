@@ -1,4 +1,4 @@
-"""Integration foundation tests for Open-Claw.
+"""Integration foundation tests for Aeon-V1.
 
 Verifies:
 - Obsidian vault structural requirements (index.md, all layer dirs, wikilinks)
@@ -13,7 +13,7 @@ from pathlib import Path
 
 import pytest
 
-from open_claw import (
+from aeon_v1 import (
     Config,
     MemoryStore,
     SimulationStore,
@@ -23,13 +23,13 @@ from open_claw import (
     select_next_task,
     simulate_action,
 )
-from open_claw.exceptions import CoreMemoryProtectedError
-from open_claw.memory_store import _write_markdown as _mem_write_markdown
+from aeon_v1.exceptions import CoreMemoryProtectedError
+from aeon_v1.memory_store import _write_markdown as _mem_write_markdown
 
 
 REPO_ROOT = Path(__file__).parent.parent
 VAULT_DIR = REPO_ROOT / "vault"
-SRC_DIR   = REPO_ROOT / "src" / "open_claw"
+SRC_DIR   = REPO_ROOT / "src" / "aeon_v1"
 
 
 # ---------------------------------------------------------------------------

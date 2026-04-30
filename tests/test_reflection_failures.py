@@ -15,11 +15,11 @@ import json
 
 import pytest
 
-from open_claw import Config, evaluate_simulation, ingest, reflect
-from open_claw.evaluate import EvaluationStore
-from open_claw.reflect import _analyse
-from open_claw.simulate import simulate_action
-from open_claw.tasks import TaskStore
+from aeon_v1 import Config, evaluate_simulation, ingest, reflect
+from aeon_v1.evaluate import EvaluationStore
+from aeon_v1.reflect import _analyse
+from aeon_v1.simulate import simulate_action
+from aeon_v1.tasks import TaskStore
 
 
 # ---------------------------------------------------------------------------
@@ -165,7 +165,7 @@ def test_reflect_failure_count_matches_mismatch_evaluations(cfg):
 
 def _get_reflection_markdown(cfg) -> str:
     """Return the Markdown text of the most recent reflection."""
-    from open_claw.memory_store import MemoryStore
+    from aeon_v1.memory_store import MemoryStore
     reflections = MemoryStore(cfg).list_memories("reflections")
     assert reflections, "No reflections found"
     r = sorted(reflections, key=lambda x: x.get("created", ""))[-1]

@@ -3,7 +3,7 @@ import json
 import pytest
 from pathlib import Path
 
-from open_claw import AgentNode, AGENT_ROLES, Config, Orchestrator, ingest
+from aeon_v1 import AgentNode, AGENT_ROLES, Config, Orchestrator, ingest
 
 
 # ---------------------------------------------------------------------------
@@ -169,10 +169,10 @@ def test_executor_role_with_task(cfg):
         "I learned a critical key insight: need to build the executor pipeline.",
         config=cfg,
     )
-    from open_claw import reflect
+    from aeon_v1 import reflect
     reflect(cfg)
 
-    from open_claw import TaskStore
+    from aeon_v1 import TaskStore
     tasks = TaskStore(cfg).list_tasks(status="pending")
     if not tasks:
         pytest.skip("No pending tasks created from reflection — skip.")
@@ -315,10 +315,10 @@ def test_tick_executor_runs_when_task_pending(cfg):
         "I learned a critical key insight: need to build the orchestrator pipeline.",
         config=cfg,
     )
-    from open_claw import reflect
+    from aeon_v1 import reflect
     reflect(cfg)
 
-    from open_claw import TaskStore
+    from aeon_v1 import TaskStore
     tasks = TaskStore(cfg).list_tasks(status="pending")
     if not tasks:
         pytest.skip("No pending tasks — skip executor tick test.")
@@ -349,15 +349,15 @@ def test_config_max_thinking_agents_settable():
 # ---------------------------------------------------------------------------
 
 def test_agent_node_exported():
-    from open_claw import AgentNode
+    from aeon_v1 import AgentNode
     assert callable(AgentNode)
 
 
 def test_orchestrator_exported():
-    from open_claw import Orchestrator
+    from aeon_v1 import Orchestrator
     assert callable(Orchestrator)
 
 
 def test_agent_roles_exported():
-    from open_claw import AGENT_ROLES
+    from aeon_v1 import AGENT_ROLES
     assert isinstance(AGENT_ROLES, set)

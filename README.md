@@ -1,14 +1,14 @@
-# Open-Claw
+# Aeon-V1
 
 A **local-first recursive AI memory and learning system** built on plain files.
 
-Open-Claw stores knowledge in layered memory — raw captures, episodic summaries, semantic concepts, and recursive reflections — using Markdown and JSON so that humans and agents can both read and extend it.
+Aeon-V1 stores knowledge in layered memory — raw captures, episodic summaries, semantic concepts, and recursive reflections — using Markdown and JSON so that humans and agents can both read and extend it.
 
 ---
 
-## What Open-Claw Is
+## What Aeon-V1 Is
 
-Open-Claw is a structured memory framework, not an autonomous AI.  
+Aeon-V1 is a structured memory framework, not an autonomous AI.  
 It gives any agent (or human) a place to:
 
 - Store raw input exactly as received
@@ -178,9 +178,9 @@ Execution requires explicit per-action human approval, sandboxing, and rollback 
 
 ## Layer 4 — Optional LLM Reasoning
 
-Open-Claw works fully without an LLM. Layer 4 adds **optional AI narrative enhancement** to reflection and simulation records while keeping all existing behavior intact.
+Aeon-V1 works fully without an LLM. Layer 4 adds **optional AI narrative enhancement** to reflection and simulation records while keeping all existing behavior intact.
 
-**The LLM is not the memory authority.** The file-based Open-Claw system remains the source of truth. The LLM only improves the quality of reflection text and simulation planning text.
+**The LLM is not the memory authority.** The file-based Aeon-V1 system remains the source of truth. The LLM only improves the quality of reflection text and simulation planning text.
 
 ### What the LLM improves
 
@@ -193,13 +193,13 @@ Open-Claw works fully without an LLM. Layer 4 adds **optional AI narrative enhan
 
 ```bash
 # Linux / macOS
-export OPENCLAW_LLM=1
+export AEON_V1_LLM=1
 export ANTHROPIC_API_KEY=your_key_here
 python scripts/run_reflection.py
 python scripts/manage_tasks.py simulate
 
 # PowerShell
-$env:OPENCLAW_LLM="1"
+$env:AEON_V1_LLM="1"
 $env:ANTHROPIC_API_KEY="your_key_here"
 ```
 
@@ -210,7 +210,7 @@ pip install anthropic
 
 ### Fallback behavior
 
-If `OPENCLAW_LLM` is not set, the API key is missing, `anthropic` is not installed, or the API call fails for any reason, `generate_text()` returns `None` and the rule-based path runs unchanged. No crash. No silent data change.
+If `AEON_V1_LLM` is not set, the API key is missing, `anthropic` is not installed, or the API call fails for any reason, `generate_text()` returns `None` and the rule-based path runs unchanged. No crash. No silent data change.
 
 ### What the LLM never does
 
@@ -237,7 +237,7 @@ These fields are `true` / model name / provider name when LLM was used.
 
 ## Timestamps and Timezones
 
-Open-Claw uses a two-layer timestamp strategy to avoid timezone bugs while keeping notes readable:
+Aeon-V1 uses a two-layer timestamp strategy to avoid timezone bugs while keeping notes readable:
 
 | Location | Format | Example |
 |---|---|---|
@@ -247,12 +247,12 @@ Open-Claw uses a two-layer timestamp strategy to avoid timezone bugs while keepi
 **Default display timezone:** `America/New_York` — change it in `Config.display_timezone`.
 
 ```python
-from open_claw import Config
+from aeon_v1 import Config
 config = Config()
 config.display_timezone = "Europe/London"   # or any IANA name
 ```
 
-All helpers live in `src/open_claw/time_utils.py`:
+All helpers live in `src/aeon_v1/time_utils.py`:
 
 | Function | Returns |
 |---|---|
@@ -271,7 +271,7 @@ pip install tzdata
 
 ## Safety and Control
 
-Open-Claw is a **local memory framework**, not an autonomous uncontrolled agent.
+Aeon-V1 is a **local memory framework**, not an autonomous uncontrolled agent.
 
 - All files are local and human-readable at all times
 - No action is taken without an explicit script invocation
@@ -292,8 +292,8 @@ See `vault/core/PROTECTED.md` for the core memory protection contract.
 ### Install
 
 ```bash
-git clone https://github.com/jessedaustin93/open-claw
-cd open-claw
+git clone https://github.com/jessedaustin93/aeon-v1
+cd aeon-v1
 pip install -e ".[dev]"
 ```
 
@@ -313,7 +313,7 @@ python scripts/ingest_text.py "I learned that layered memory systems are more ro
 python scripts/ingest_text.py --file my_notes.txt --source journal
 
 # From stdin
-echo "Important project goal: ship Open-Claw v1." | python scripts/ingest_text.py
+echo "Important project goal: ship Aeon-V1 v1." | python scripts/ingest_text.py
 ```
 
 ### Run Reflection
@@ -332,7 +332,7 @@ python scripts/search_memory.py "goal" --types episodic semantic
 ### Link Related Notes
 
 ```python
-from open_claw import Config, link_memories
+from aeon_v1 import Config, link_memories
 link_memories(config=Config())
 ```
 
@@ -363,8 +363,8 @@ After reflection pass:
 ## Project Structure
 
 ```
-open-claw/
-  src/open_claw/      # Python package
+aeon-v1/
+  src/aeon_v1/      # Python package
     config.py         # Paths and tunable parameters
     memory_store.py   # Read/write memories (JSON + Markdown)
     ingest.py         # Promotion logic: raw -> episodic -> semantic

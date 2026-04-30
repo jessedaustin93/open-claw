@@ -1,4 +1,4 @@
-"""Action simulation engine for Open-Claw Layer 3.
+"""Action simulation engine for Aeon-V1 Layer 3.
 
 simulate_action() produces a structured simulation record describing what
 *would* happen if the task were acted upon — and stores it as JSON + Markdown.
@@ -156,7 +156,7 @@ def simulate_action(task: Dict, config: Optional[Config] = None) -> Dict:
     if config.enable_real_actions:
         raise RuntimeError(
             "enable_real_actions is True, but no real execution path is implemented. "
-            "Open-Claw is a simulation-only system. Do not set enable_real_actions = True."
+            "Aeon-V1 is a simulation-only system. Do not set enable_real_actions = True."
         )
 
     sim_store = SimulationStore(config)

@@ -1,4 +1,4 @@
-"""Schema definitions and validation for Open-Claw Layer 7.
+"""Schema definitions and validation for Aeon-V1 Layer 7.
 
 All inter-agent messages and staging proposals MUST conform to these schemas.
 Validation is pure — no I/O, no side effects, no imports from other layers.

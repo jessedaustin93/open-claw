@@ -1,4 +1,4 @@
-"""Manifest Monitor Agent for Open-Claw.
+"""Manifest Monitor Agent for Aeon-V1.
 
 Two responsibilities:
 
@@ -49,7 +49,7 @@ _STDLIB: FrozenSet[str] = frozenset({
     "zoneinfo", "_pytest", "pytest",   # pytest is a dev tool, in manifest separately
 })
 
-_OWN_PACKAGE = "open_claw"
+_OWN_PACKAGE = "aeon_v1"
 
 # Manifest tool name patterns: lines starting with "### " are tool headings
 _MANIFEST_HEADING = re.compile(r"^###\s+(.+)$", re.MULTILINE)
@@ -199,7 +199,7 @@ class ManifestAgent:
     def scan_imports(self) -> Set[str]:
         """Walk all .py files under src/ and extract third-party import roots.
 
-        Excludes stdlib modules and the open_claw package itself.
+        Excludes stdlib modules and the aeon_v1 package itself.
         Returns only top-level package names (e.g. 'anthropic' not 'anthropic.types').
         """
         src_dir = self.config.base_path / "src"
@@ -316,7 +316,7 @@ class ManifestAgent:
             purpose:       What it does in THIS system.
             importance:    'Required' | 'Optional' | 'Experimental' | 'Planned'
             link:          Official download / purchase URL.
-            notes:         Why this choice matters for Open-Claw.
+            notes:         Why this choice matters for Aeon-V1.
             auth_provider: Override the default CLIAuthProvider for approval.
 
         Returns a dict with keys: ok, proposal_id, decision, reason, memory_id.

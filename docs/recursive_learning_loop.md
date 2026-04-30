@@ -2,7 +2,7 @@
 
 ## Concept
 
-Open-Claw implements a three-phase loop that mirrors how biological memory consolidation works:
+Aeon-V1 implements a three-phase loop that mirrors how biological memory consolidation works:
 
 ```
  ┌──────────────────────────────────────────────────┐
@@ -127,7 +127,7 @@ All output is local files only. `enable_real_actions` is always `False` — ther
 
 Simulation records include: `task_id`, `proposed_action`, `expected_outcome`, `risks`, `required_human_approval` (always True by default), `source_links`, `llm_used`, `llm_model`, `llm_provider`.
 
-**Why no real execution?** Open-Claw is a memory and reasoning framework. Execution capability requires explicit human approval for each action, proper sandboxing, and rollback mechanisms — none of which exist yet. This layer is the planning substrate that prepares for future tool use without risking uncontrolled system changes.
+**Why no real execution?** Aeon-V1 is a memory and reasoning framework. Execution capability requires explicit human approval for each action, proper sandboxing, and rollback mechanisms — none of which exist yet. This layer is the planning substrate that prepares for future tool use without risking uncontrolled system changes.
 
 ### Layer 3 CLI
 

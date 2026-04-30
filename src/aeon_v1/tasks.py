@@ -1,4 +1,4 @@
-"""Task storage layer for Open-Claw Layer 3.
+"""Task storage layer for Aeon-V1 Layer 3.
 
 Tasks are operational records derived from reflection suggested_tasks.
 They are append-only at creation time; status updates are written in place
