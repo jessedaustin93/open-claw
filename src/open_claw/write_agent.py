@@ -166,27 +166,29 @@ class WriteAgent:
                 "memory_id": None, "reason": reason,
             }
 
-        # Commit via ingest() — the only write into the memory system.
+        # Type-specific commit handler.
         try:
-            result = ingest(
-                text=proposal["content"],
-                source=f"layer7:{proposal.get('proposed_by', 'unknown')}",
-                config=self.config,
-            )
+            if proposal.get("type") == "tool_addition":
+                memory_id = _commit_tool_addition(proposal, self.config, self._guard)
+            else:
+                result = ingest(
+                    text=proposal["content"],
+                    source=f"layer7:{proposal.get('proposed_by', 'unknown')}",
+                    config=self.config,
+                )
+                memory_id = (
+                    (result.get("episodic") or {}).get("id")
+                    or (result.get("semantic") or {}).get("id")
+                    or (result.get("raw") or {}).get("id")
+                    or _generate_id()
+                )
         except Exception as exc:
-            reason = f"ingest_error: {exc}"
+            reason = f"commit_error: {exc}"
             self._audit.append(proposal_id, "WriteAgent", "commit", reason)
             return {
                 "ok": False, "proposal_id": proposal_id,
                 "memory_id": None, "reason": reason,
             }
-
-        memory_id = (
-            (result.get("episodic") or {}).get("id")
-            or (result.get("semantic") or {}).get("id")
-            or (result.get("raw") or {}).get("id")
-            or _generate_id()
-        )
 
         # Archive the committed proposal to memory/approved/.
         proposal["status"]       = "committed"
@@ -245,3 +247,37 @@ class WriteAgent:
             except Exception:
                 pass
         return proposals
+
+
+# ---------------------------------------------------------------------------
+# Tool-addition commit handler (called by WriteAgent for type="tool_addition")
+# ---------------------------------------------------------------------------
+
+def _commit_tool_addition(proposal: Dict, config: Config, guard: PathGuard) -> str:
+    """Write an approved tool addition to memory/tool_additions/.
+
+    Returns the ID of the stored addition.
+    """
+    additions_dir = config.memory_path / "tool_additions"
+    additions_dir.mkdir(parents=True, exist_ok=True)
+
+    addition_id = proposal.get("trace_id", _generate_id())
+    path = additions_dir / f"{addition_id}.json"
+    guard.assert_allowed(path)
+
+    try:
+        tool_data = json.loads(proposal["content"])
+    except (json.JSONDecodeError, KeyError):
+        tool_data = {"raw_content": proposal.get("content", "")}
+
+    record = {
+        "id":           addition_id,
+        "tool_data":    tool_data,
+        "proposed_by":  proposal.get("proposed_by", "unknown"),
+        "approved_by":  proposal.get("approved_by", "unknown"),
+        "approved_at":  proposal.get("approved_at", utc_now_iso()),
+        "trace_id":     proposal.get("trace_id", addition_id),
+        "status":       "approved",
+    }
+    path.write_text(json.dumps(record, indent=2), encoding="utf-8")
+    return addition_id

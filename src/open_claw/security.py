@@ -25,6 +25,7 @@ _ALLOWED_SUBDIRS = (
     "memory/staging",
     "memory/approved",
     "memory/logs",
+    "memory/tool_additions",
     "vault",
 )
 

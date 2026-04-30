@@ -7,7 +7,7 @@ from typing import Any, Dict, Optional, Tuple
 
 # ---- constants ---------------------------------------------------------------
 
-VALID_MEMORY_TYPES: frozenset = frozenset({"raw", "episodic", "semantic"})
+VALID_MEMORY_TYPES: frozenset = frozenset({"raw", "episodic", "semantic", "tool_addition"})
 
 VALID_STATUSES: frozenset = frozenset({
     "pending",
