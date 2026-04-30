@@ -23,6 +23,7 @@ from .llm import build_simulation_prompt, generate_text, parse_simulation_sectio
 from .memory_store import _generate_id, _wikilink
 from .tasks import TaskStore
 from .time_utils import local_date_time_string, utc_now_iso
+from .tool_calls import ToolCallStore
 from .tools import ToolRegistry
 
 _DESTRUCTIVE_SIGNALS = ("delete", "remove", "drop", "clear", "wipe", "purge")
@@ -166,6 +167,18 @@ def simulate_action(task: Dict, config: Optional[Config] = None) -> Dict:
     risks            = _risks_from_llm(llm_sections.get("Risk Assessment"), desc, config)
     tool_call        = _match_tool_call(desc, config)
 
+    # Persist matched tool call as its own traceable record.
+    tool_call_id: Optional[str] = None
+    if tool_call is not None:
+        call_store   = ToolCallStore(config)
+        call_record  = call_store.create(
+            tool_call=tool_call,
+            simulation_id=sim_id,
+            task_id=task["id"],
+            task_title=title,
+        )
+        tool_call_id = call_record["id"]
+
     simulation: Dict = {
         "id":                      sim_id,
         "task_id":                 task["id"],
@@ -174,6 +187,7 @@ def simulate_action(task: Dict, config: Optional[Config] = None) -> Dict:
         "expected_outcome":        expected_outcome,
         "risks":                   risks,
         "tool_call":               tool_call,
+        "tool_call_id":            tool_call_id,
         "required_human_approval": config.require_human_approval_for_simulation,
         "created_at":              now,
         "source_links":            [task_link],

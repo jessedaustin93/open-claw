@@ -11,6 +11,7 @@ from .search import search
 from .simulate import SimulationStore, simulate_action
 from .tasks import TaskStore, create_tasks_from_reflection
 from .time_utils import local_date_time_string, local_now_string, local_time_string, utc_now_iso
+from .tool_calls import ToolCallStore
 from .tools import ToolDefinition, ToolRegistry
 
 __all__ = [
@@ -25,6 +26,7 @@ __all__ = [
     "SimulationStore",
     "TaskStore",
     "ToolAlreadyRegisteredError",
+    "ToolCallStore",
     "ToolDefinition",
     "ToolRegistry",
     "create_tasks_from_reflection",
