@@ -31,6 +31,8 @@ class Config:
         self.display_timezone: str = "America/New_York"
         # Layer 5 — tool registry
         self.allow_tool_override: bool = False
+        # Layer 6 — orchestrator / agent pool
+        self.max_thinking_agents: int = 10
         # Layer 4 — optional LLM reasoning
         # Toggle via OPENCLAW_LLM=1 environment variable or set directly.
         self.llm_enabled: bool = os.environ.get("OPENCLAW_LLM", "0").strip() == "1"

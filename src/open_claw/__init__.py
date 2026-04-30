@@ -1,3 +1,4 @@
+from .agent import AGENT_ROLES, AgentNode
 from .builtin_tools import BUILTIN_TOOLS, COMMAND_PREVIEW, FILE_READ, FILE_WRITE, register_builtin_tools
 from .config import Config
 from .decision import DecisionStore, select_next_task
@@ -7,6 +8,7 @@ from .ingest import ingest
 from .linker import link_memories
 from .llm import generate_text
 from .memory_store import MemoryStore
+from .orchestrator import Orchestrator
 from .reflect import reflect
 from .search import search
 from .simulate import SimulationStore, simulate_action
@@ -16,6 +18,8 @@ from .tool_calls import ToolCallStore
 from .tools import ToolDefinition, ToolRegistry
 
 __all__ = [
+    "AGENT_ROLES",
+    "AgentNode",
     "BUILTIN_TOOLS",
     "COMMAND_PREVIEW",
     "Config",
@@ -26,6 +30,7 @@ __all__ = [
     "FILE_READ",
     "FILE_WRITE",
     "MemoryStore",
+    "Orchestrator",
     "SimulationStore",
     "TaskStore",
     "ToolAlreadyRegisteredError",
