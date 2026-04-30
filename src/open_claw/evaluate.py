@@ -25,6 +25,7 @@ from typing import Dict, List, Optional
 from .config import Config
 from .memory_store import MemoryStore, _generate_id, _wikilink
 from .simulate import SimulationStore
+from .tasks import TaskStore
 from .time_utils import local_date_time_string, utc_now_iso
 
 _STOPWORDS = frozenset({
@@ -193,6 +194,17 @@ def evaluate_simulation(
     feedback   = _FEEDBACK_MAP[verdict]
     SimulationStore(config).update_feedback(sim_id, feedback)
 
+    # --- Adjust task confidence based on evaluation outcome -------------------
+    _CONFIDENCE_DELTA = {"success": +0.15, "failure": -0.20, "unknown": -0.05}
+    task_store = TaskStore(config)
+    current_task = task_store.get_task(task_id)
+    confidence_before = round(current_task["confidence"], 4) if current_task else None
+    if current_task is not None:
+        new_conf = current_task["confidence"] + _CONFIDENCE_DELTA[feedback]
+        task_store.update_confidence(task_id, new_conf)
+    confidence_after = round(max(0.0, min(1.0, confidence_before + _CONFIDENCE_DELTA[feedback])), 4) if confidence_before is not None else None
+    confidence_delta = round(_CONFIDENCE_DELTA[feedback], 4) if confidence_before is not None else None
+
     # --- Write raw memory verbatim, then promote directly to episodic ----------
     store       = MemoryStore(config)
     eval_text   = _evaluation_text(task_title, sim_id, expected, result, score, verdict)
@@ -225,7 +237,10 @@ def evaluate_simulation(
         "actual_result":     result,
         "match_score":       score,
         "verdict":           verdict,
-        "feedback":          feedback,
+        "feedback":              feedback,
+        "task_confidence_before": confidence_before,
+        "task_confidence_after":  confidence_after,
+        "confidence_delta":       confidence_delta,
         "divergences":       diverges,
         "episodic_memory_id": episodic["id"],
         "created_at":        now,

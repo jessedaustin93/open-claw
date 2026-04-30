@@ -98,6 +98,20 @@ class TaskStore:
 
     # --------------------------------------------------------------- update --
 
+    def update_confidence(self, task_id: str, new_confidence: float) -> Optional[Dict]:
+        """Update task confidence in place, clamped to [0.0, 1.0].
+
+        Returns the updated task, or None if the task was not found.
+        """
+        path = self.config.memory_path / "tasks" / f"{task_id}.json"
+        if not path.exists():
+            return None
+        task = json.loads(path.read_text(encoding="utf-8"))
+        task["confidence"] = round(max(0.0, min(1.0, new_confidence)), 4)
+        path.write_text(json.dumps(task, indent=2), encoding="utf-8")
+        self._write_markdown(task)
+        return task
+
     def update_status(self, task_id: str, status: str) -> Optional[Dict]:
         """Update task status in place.
 
