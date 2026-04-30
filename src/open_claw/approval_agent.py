@@ -10,6 +10,8 @@ DESIGN PRINCIPLE
 NO AUTO-APPROVAL is ever permitted under any code path.
 Any proposal must pass through request_approval() before it can be committed.
 A proposal that skips this gate is a security violation, not a fast path.
+
+# LAYER 7 STABLE — DO NOT MODIFY WITHOUT EXPLICIT INSTRUCTION
 """
 import json
 from abc import ABC, abstractmethod

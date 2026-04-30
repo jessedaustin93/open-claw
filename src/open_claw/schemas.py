@@ -2,6 +2,8 @@
 
 All inter-agent messages and staging proposals MUST conform to these schemas.
 Validation is pure — no I/O, no side effects, no imports from other layers.
+
+# LAYER 7 STABLE — DO NOT MODIFY WITHOUT EXPLICIT INSTRUCTION
 """
 from typing import Any, Dict, Optional, Tuple
 

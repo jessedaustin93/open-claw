@@ -18,6 +18,8 @@ SAFETY CONTRACT
 - Every action — creation, block, commit, error — is written to the audit log.
 - No subprocess, os.system, exec, eval, or network primitive is used.
 - vault/core/ is never written by this module.
+
+# LAYER 7 STABLE — DO NOT MODIFY WITHOUT EXPLICIT INSTRUCTION
 """
 import json
 from typing import Dict, List, Optional

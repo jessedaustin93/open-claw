@@ -10,6 +10,8 @@ SAFETY CONTRACT
 - vault/core/ is never written by this module.
 - Traversal attempts (../) raise SecurityError immediately and are logged.
 - ValidationAgent NEVER modifies proposal *content* — only the status field.
+
+# LAYER 7 STABLE — DO NOT MODIFY WITHOUT EXPLICIT INSTRUCTION
 """
 import json
 import re
