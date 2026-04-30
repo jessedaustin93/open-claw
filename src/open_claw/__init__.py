@@ -1,3 +1,4 @@
+from .builtin_tools import BUILTIN_TOOLS, COMMAND_PREVIEW, FILE_READ, FILE_WRITE, register_builtin_tools
 from .config import Config
 from .decision import DecisionStore, select_next_task
 from .exceptions import CoreMemoryProtectedError, ToolAlreadyRegisteredError
@@ -13,9 +14,13 @@ from .time_utils import local_date_time_string, local_now_string, local_time_str
 from .tools import ToolDefinition, ToolRegistry
 
 __all__ = [
+    "BUILTIN_TOOLS",
+    "COMMAND_PREVIEW",
     "Config",
     "CoreMemoryProtectedError",
     "DecisionStore",
+    "FILE_READ",
+    "FILE_WRITE",
     "MemoryStore",
     "SimulationStore",
     "TaskStore",
@@ -30,6 +35,7 @@ __all__ = [
     "local_now_string",
     "local_time_string",
     "reflect",
+    "register_builtin_tools",
     "search",
     "select_next_task",
     "simulate_action",
