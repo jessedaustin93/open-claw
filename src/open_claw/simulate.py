@@ -15,6 +15,7 @@ in the shipped Config — changing it does nothing because no execution path
 exists to enable).
 """
 import json
+import re
 from typing import Dict, List, Optional
 
 from .config import Config
@@ -22,10 +23,19 @@ from .llm import build_simulation_prompt, generate_text, parse_simulation_sectio
 from .memory_store import _generate_id, _wikilink
 from .tasks import TaskStore
 from .time_utils import local_date_time_string, utc_now_iso
+from .tools import ToolRegistry
 
 _DESTRUCTIVE_SIGNALS = ("delete", "remove", "drop", "clear", "wipe", "purge")
 _EXTERNAL_SIGNALS    = ("deploy", "push", "publish", "release", "ship")
 _NETWORK_SIGNALS     = ("api", "request", "call", "fetch", "send", "http", "url")
+
+# Maps registered tool names to the description keywords that signal a match.
+# Only tools present in the ToolRegistry are considered; unregistered names are skipped.
+_TOOL_SIGNALS: Dict[str, tuple] = {
+    "file_read":       ("read", "load", "open", "view", "inspect"),
+    "file_write":      ("write", "save", "create", "update", "append", "generate"),
+    "command_preview": ("run", "execute", "command", "shell", "script", "invoke"),
+}
 
 
 class SimulationStore:
@@ -80,6 +90,12 @@ class SimulationStore:
             "\n".join(f"- {r}" for r in sim.get("risks", []))
             or "- None identified"
         )
+        tool_call = sim.get("tool_call")
+        if tool_call:
+            tool_call_md = f"```json\n{json.dumps(tool_call, indent=2)}\n```"
+        else:
+            tool_call_md = "_No matching tool found in registry._"
+
         display_tz = self.config.display_timezone
         local_ts = local_date_time_string(sim["created_at"], display_tz)
         task_link = _wikilink("tasks", sim["task_id"], sim["task_title"])
@@ -88,6 +104,7 @@ class SimulationStore:
             f"**Created:** {local_ts}\n\n"
             f"**Task:** {task_link}\n\n"
             f"**Proposed Action:** {sim['proposed_action']}\n\n"
+            f"**Tool Call:**\n\n{tool_call_md}\n\n"
             f"**Expected Outcome:** {sim['expected_outcome']}\n\n"
             f"**Risks:**\n{risks_md}\n\n"
             f"**Required Human Approval:** `{sim['required_human_approval']}`\n\n"
@@ -147,6 +164,7 @@ def simulate_action(task: Dict, config: Optional[Config] = None) -> Dict:
     proposed_action  = llm_sections.get("Proposed Action") or _propose_action(desc)
     expected_outcome = llm_sections.get("Expected Outcome") or _expected_outcome(title, desc)
     risks            = _risks_from_llm(llm_sections.get("Risk Assessment"), desc, config)
+    tool_call        = _match_tool_call(desc, config)
 
     simulation: Dict = {
         "id":                      sim_id,
@@ -155,6 +173,7 @@ def simulate_action(task: Dict, config: Optional[Config] = None) -> Dict:
         "proposed_action":         proposed_action,
         "expected_outcome":        expected_outcome,
         "risks":                   risks,
+        "tool_call":               tool_call,
         "required_human_approval": config.require_human_approval_for_simulation,
         "created_at":              now,
         "source_links":            [task_link],
@@ -167,6 +186,84 @@ def simulate_action(task: Dict, config: Optional[Config] = None) -> Dict:
     task_store.update_status(task["id"], "simulated")
 
     return {"simulation": simulation}
+
+
+# ---------------------------------------------------------------------------
+# Tool call mapping — matches task description to a registered tool schema.
+# ---------------------------------------------------------------------------
+
+def _match_tool_call(description: str, config: Config) -> Optional[Dict]:
+    """Map a task description to the best-matching registered tool.
+
+    Scores each tool in _TOOL_SIGNALS by counting keyword hits in the
+    description. Returns a structured call dict for the top scorer, or None
+    if no registered tool scores above zero.
+    """
+    registry  = ToolRegistry(config)
+    desc_lower = description.lower()
+
+    best_name:  Optional[str] = None
+    best_score: int           = 0
+
+    for tool_name, signals in _TOOL_SIGNALS.items():
+        tool = registry.get(tool_name)
+        if tool is None or not tool.enabled:
+            continue
+        score = sum(1 for s in signals if re.search(rf"\b{re.escape(s)}\b", desc_lower))
+        if score > best_score:
+            best_score = score
+            best_name  = tool_name
+
+    if best_name is None:
+        return None
+
+    return {
+        "tool":                  best_name,
+        "arguments":             _extract_arguments(description, best_name),
+        "matched_by":            "keyword",
+        "requires_human_review": True,
+    }
+
+
+def _extract_arguments(description: str, tool_name: str) -> Dict:
+    """Extract inferred arguments from the task description for the matched tool."""
+    if tool_name in ("file_read", "file_write"):
+        path = _extract_path(description)
+        return {"path": path} if path else {}
+    if tool_name == "command_preview":
+        cmd = _extract_command(description)
+        return {"command": cmd} if cmd else {}
+    return {}
+
+
+def _extract_path(text: str) -> Optional[str]:
+    """Return the first file path found in text, or None."""
+    # Prefer explicitly quoted paths
+    m = re.search(r'["\']([^"\']+\.[a-zA-Z]{1,6})["\']', text)
+    if m:
+        return m.group(1)
+    # Bare word with a recognisable file extension
+    m = re.search(r'\b([\w./\\-]+\.[a-z]{2,6})\b', text, re.IGNORECASE)
+    if m:
+        return m.group(1)
+    return None
+
+
+def _extract_command(text: str) -> Optional[str]:
+    """Return the most likely shell command found in text, or None."""
+    # Backtick-delimited is the most explicit signal
+    m = re.search(r'`([^`]+)`', text)
+    if m:
+        return m.group(1).strip()
+    # After an action verb
+    m = re.search(
+        r'\b(?:run|execute|invoke|call)\b\s+(?:the\s+)?["\']?([\w][\w\s.-]{1,60}?)["\']?'
+        r'(?=\s*[,.]|\s*$)',
+        text, re.IGNORECASE,
+    )
+    if m:
+        return m.group(1).strip()
+    return None
 
 
 # ---------------------------------------------------------------------------

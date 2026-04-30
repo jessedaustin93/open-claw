@@ -335,8 +335,8 @@ def test_simulation_fields_are_complete(cfg_with_reflection):
     sim     = result["simulation"]
     required = [
         "id", "task_id", "task_title", "proposed_action",
-        "expected_outcome", "risks", "required_human_approval",
-        "created_at", "source_links",
+        "expected_outcome", "risks", "tool_call",
+        "required_human_approval", "created_at", "source_links",
     ]
     for field in required:
         assert field in sim, f"Simulation missing required field: {field}"
