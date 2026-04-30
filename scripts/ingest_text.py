@@ -34,7 +34,7 @@ Examples:
     elif args.text:
         text = args.text
     elif not sys.stdin.isatty():
-        text = sys.stdin.read().strip()
+        text = sys.stdin.buffer.read().decode("utf-8").strip()
     else:
         parser.error("Provide text as an argument, --file, or via stdin.")
 
