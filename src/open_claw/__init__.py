@@ -1,6 +1,7 @@
 from .builtin_tools import BUILTIN_TOOLS, COMMAND_PREVIEW, FILE_READ, FILE_WRITE, register_builtin_tools
 from .config import Config
 from .decision import DecisionStore, select_next_task
+from .evaluate import EvaluationStore, evaluate_simulation
 from .exceptions import CoreMemoryProtectedError, ToolAlreadyRegisteredError
 from .ingest import ingest
 from .linker import link_memories
@@ -18,6 +19,8 @@ __all__ = [
     "BUILTIN_TOOLS",
     "COMMAND_PREVIEW",
     "Config",
+    "EvaluationStore",
+    "evaluate_simulation",
     "CoreMemoryProtectedError",
     "DecisionStore",
     "FILE_READ",
