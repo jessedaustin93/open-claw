@@ -1,6 +1,7 @@
 from typing import Dict, List, Optional, Tuple
 
 from .config import Config
+from .evaluate import EvaluationStore
 from .llm import build_reflection_prompt, generate_text, parse_reflection_sections
 from .memory_store import MemoryStore, _wikilink
 from .tasks import create_tasks_from_reflection
@@ -92,7 +93,9 @@ def reflect(config: Optional[Config] = None) -> Dict:
 
     all_tags = list({tag for m in episodic + semantic for tag in m.get("tags", [])})
 
-    analysis = _analyse(episodic, semantic)
+    past_failures = EvaluationStore(config).list_evaluations(feedback="failure")
+
+    analysis = _analyse(episodic, semantic, past_failures)
     analysis["display_tz"] = config.display_timezone
 
     content = _generate_reflection(analysis, config)
@@ -105,6 +108,7 @@ def reflect(config: Optional[Config] = None) -> Dict:
         "suggested_core_updates": analysis["suggested_core_updates"],
         "detected_patterns":      analysis["detected_patterns"],
         "uncertainty_notes":      analysis["uncertainty_notes"],
+        "failure_count":          analysis["failure_count"],
         "generated_at":           analysis["generated_at"],
         "llm_used":               llm_meta["llm_used"],
         "llm_model":              llm_meta["llm_model"],
@@ -142,7 +146,11 @@ def _is_duplicate(source_ids: List[str], store: MemoryStore) -> bool:
     return False
 
 
-def _analyse(episodic: List[Dict], semantic: List[Dict]) -> Dict:
+def _analyse(
+    episodic: List[Dict],
+    semantic: List[Dict],
+    past_failures: Optional[List[Dict]] = None,
+) -> Dict:
     """Build a structured analysis dict from episodic and semantic memories."""
     sources = episodic + semantic
 
@@ -158,6 +166,17 @@ def _analyse(episodic: List[Dict], semantic: List[Dict]) -> Dict:
     suggested_core_updates = _extract_core_suggestions(episodic, semantic)
     confidence = _compute_confidence(sources, tag_counts, len(uncertainty_notes))
 
+    failures = past_failures or []
+    recent_failures = [
+        {
+            "task_title":  f.get("task_title",  f.get("task_id", "unknown")),
+            "match_score": f.get("match_score", 0.0),
+            "divergences": f.get("divergences", []),
+            "simulation_id": f.get("simulation_id", ""),
+        }
+        for f in sorted(failures, key=lambda r: r.get("created_at", ""))[-5:]
+    ]
+
     return {
         "sources":               sources,
         "source_ids":            [m["id"] for m in sources],
@@ -169,6 +188,8 @@ def _analyse(episodic: List[Dict], semantic: List[Dict]) -> Dict:
         "uncertainty_notes":     uncertainty_notes,
         "suggested_tasks":       suggested_tasks,
         "suggested_core_updates": suggested_core_updates,
+        "failure_count":         len(failures),
+        "recent_failures":       recent_failures,
         "confidence":            confidence,
         "generated_at":          utc_now_iso(),
     }
@@ -325,6 +346,17 @@ def _generate_reflection(analysis: Dict, config: Optional[Config] = None) -> str
                 lines.append(f"- {note}")
         else:
             lines.append("- No uncertainty signals detected.")
+    # Inject past simulation failures regardless of LLM usage — always rule-based.
+    recent_failures = analysis.get("recent_failures", [])
+    if recent_failures:
+        lines.append("")
+        lines.append(f"**Past Simulation Failures ({len(recent_failures)} most recent):**")
+        for f in recent_failures:
+            divs = ", ".join(f["divergences"]) if f["divergences"] else "none"
+            lines.append(
+                f"- `{f['task_title']}` — match score {f['match_score']:.0%}; "
+                f"divergences: {divs}"
+            )
     lines.append("")
 
     # Section 5: Suggested Tasks (LLM-enhanced or rule-based)

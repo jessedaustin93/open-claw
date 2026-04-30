@@ -98,6 +98,7 @@ class EvaluationStore:
         self,
         verdict:       Optional[str] = None,
         simulation_id: Optional[str] = None,
+        feedback:      Optional[str] = None,
     ) -> List[Dict]:
         eval_dir = self.config.memory_path / "evaluations"
         if not eval_dir.exists():
@@ -111,6 +112,8 @@ class EvaluationStore:
             if verdict       is not None and r.get("verdict")       != verdict:
                 continue
             if simulation_id is not None and r.get("simulation_id") != simulation_id:
+                continue
+            if feedback      is not None and r.get("feedback")      != feedback:
                 continue
             records.append(r)
         return sorted(records, key=lambda r: r.get("created_at", ""))
