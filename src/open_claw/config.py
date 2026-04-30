@@ -48,4 +48,7 @@ class Config:
         for subdir in ["raw", "episodic", "semantic", "reflections"]:
             (self.memory_path / subdir).mkdir(parents=True, exist_ok=True)
         (self.memory_path / "schemas").mkdir(parents=True, exist_ok=True)
+        # Layer 7 — governance directories
+        for subdir in ["staging", "approved", "logs"]:
+            (self.memory_path / subdir).mkdir(parents=True, exist_ok=True)
 
