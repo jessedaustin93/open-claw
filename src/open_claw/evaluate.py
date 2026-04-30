@@ -24,6 +24,7 @@ from typing import Dict, List, Optional
 
 from .config import Config
 from .memory_store import MemoryStore, _generate_id, _wikilink
+from .simulate import SimulationStore
 from .time_utils import local_date_time_string, utc_now_iso
 
 _STOPWORDS = frozenset({
@@ -188,6 +189,10 @@ def evaluate_simulation(
     verdict    = _verdict(score)
     diverges   = _divergences(expected, result)
 
+    _FEEDBACK_MAP = {"match": "success", "mismatch": "failure", "partial_match": "unknown"}
+    feedback   = _FEEDBACK_MAP[verdict]
+    SimulationStore(config).update_feedback(sim_id, feedback)
+
     # --- Write raw memory verbatim, then promote directly to episodic ----------
     store       = MemoryStore(config)
     eval_text   = _evaluation_text(task_title, sim_id, expected, result, score, verdict)
@@ -220,6 +225,7 @@ def evaluate_simulation(
         "actual_result":     result,
         "match_score":       score,
         "verdict":           verdict,
+        "feedback":          feedback,
         "divergences":       diverges,
         "episodic_memory_id": episodic["id"],
         "created_at":        now,

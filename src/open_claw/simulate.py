@@ -58,6 +58,26 @@ class SimulationStore:
         self._write_markdown(simulation)
         return simulation
 
+    def update_feedback(self, sim_id: str, feedback: str) -> Optional[Dict]:
+        """Update the feedback field of a simulation record in place.
+
+        Args:
+            sim_id:   ID of the simulation to update.
+            feedback: One of "success", "failure", "unknown".
+
+        Returns the updated record, or None if the simulation was not found.
+        """
+        if feedback not in {"success", "failure", "unknown"}:
+            raise ValueError(f"feedback must be 'success', 'failure', or 'unknown'; got {feedback!r}")
+        path = self.config.memory_path / "simulations" / f"{sim_id}.json"
+        if not path.exists():
+            return None
+        sim = json.loads(path.read_text(encoding="utf-8"))
+        sim["feedback"] = feedback
+        path.write_text(json.dumps(sim, indent=2), encoding="utf-8")
+        self._write_markdown(sim)
+        return sim
+
     def list_simulations(self) -> List[Dict]:
         sim_dir = self.config.memory_path / "simulations"
         if not sim_dir.exists():
@@ -80,6 +100,7 @@ class SimulationStore:
             ("task_title",              sim["task_title"]),
             ("created_at",              sim["created_at"]),
             ("required_human_approval", sim["required_human_approval"]),
+            ("feedback",                sim.get("feedback", "unknown")),
         ]:
             fm_lines.append(f"{key}: {val}")
         fm_lines.append("source_links:")
@@ -189,6 +210,7 @@ def simulate_action(task: Dict, config: Optional[Config] = None) -> Dict:
         "tool_call":               tool_call,
         "tool_call_id":            tool_call_id,
         "required_human_approval": config.require_human_approval_for_simulation,
+        "feedback":                "unknown",
         "created_at":              now,
         "source_links":            [task_link],
         "llm_used":                llm_meta["llm_used"],
