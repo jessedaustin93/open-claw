@@ -340,7 +340,11 @@ def compact(text: str, limit: int) -> str:
     one_line = " ".join(text.split())
     if len(one_line) <= limit:
         return one_line
-    return one_line[: max(0, limit - 3)].rstrip() + "..."
+    cutoff = max(0, limit - 3)
+    shortened = one_line[:cutoff].rstrip()
+    if " " in shortened:
+        shortened = shortened.rsplit(" ", 1)[0]
+    return shortened + "..."
 
 
 def fallback_response(user_text: str, memories: List[Dict]) -> str:
