@@ -2,6 +2,30 @@ from pathlib import Path
 import os
 
 
+def _load_env(path: Path) -> None:
+    """Load a .env file into os.environ without overwriting existing vars.
+
+    Skipped during pytest runs so tests control their own environment via monkeypatch.
+    """
+    if os.environ.get("PYTEST_CURRENT_TEST"):
+        return
+    if not path.exists():
+        return
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        if key and key not in os.environ:
+            os.environ[key] = value
+
+
+# Load .env from project root (two levels up from this file: src/aeon_v1 -> project root)
+_load_env(Path(__file__).parent.parent.parent / ".env")
+
+
 class Config:
     def __init__(self, base_path: Path = Path(".")):
         self.base_path = Path(base_path)
@@ -36,11 +60,16 @@ class Config:
         # Layer 4 — optional LLM reasoning
         # Toggle via AEON_V1_LLM=1 environment variable or set directly.
         self.llm_enabled: bool = os.environ.get("AEON_V1_LLM", "0").strip() == "1"
-        self.llm_provider: str = "anthropic"
-        self.llm_model: str = "claude-3-5-sonnet-latest"
+        self.llm_provider: str = os.environ.get("AEON_V1_LLM_PROVIDER", "anthropic")
+        self.llm_model: str = os.environ.get("AEON_V1_LLM_MODEL", "claude-sonnet-4-6")
         self.llm_temperature: float = 0.2
-        self.llm_max_tokens: int = 1200
-        self.llm_timeout_seconds: int = 60
+        self.llm_max_tokens: int = int(os.environ.get("AEON_V1_LLM_MAX_TOKENS", "1200"))
+        self.llm_timeout_seconds: int = int(os.environ.get("AEON_V1_LLM_TIMEOUT", "120"))
+        # LM Studio / OpenAI-compatible local server
+        self.llm_base_url: str = os.environ.get("AEON_V1_LLM_BASE_URL", "http://localhost:1234/v1")
+        # When True, reflect/simulate use tool calling so the LLM queries the
+        # memory index agent instead of receiving all memories inlined in the prompt.
+        self.llm_tool_calling: bool = os.environ.get("AEON_V1_LLM_TOOL_CALLING", "0").strip() == "1"
 
     def ensure_dirs(self):
         for subdir in ["core", "raw", "episodic", "semantic", "reflections", "agents", "tasks"]:

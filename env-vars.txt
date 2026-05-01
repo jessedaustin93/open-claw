@@ -1,0 +1,45 @@
+AEON-V1 ENVIRONMENT VARIABLES
+==============================
+Update this file whenever a new variable is added.
+
+--- LLM / AI ---
+
+AEON_V1_LLM
+  Enable LLM reasoning (Layer 4). Set to 1 to enable, 0 to disable.
+  Default: 0
+
+AEON_V1_LLM_PROVIDER
+  Which LLM provider to use.
+  Options: anthropic | lmstudio
+  Default: anthropic
+
+AEON_V1_LLM_MODEL
+  Model name passed to the provider.
+  Examples: google/gemma-4-e4b (LM Studio), claude-sonnet-4-6 (Anthropic)
+  Default: claude-sonnet-4-6
+
+AEON_V1_LLM_BASE_URL
+  Base URL for OpenAI-compatible local servers (used by lmstudio provider).
+  Default: http://localhost:1234/v1
+
+AEON_V1_LLM_TIMEOUT
+  Request timeout in seconds. Increase for slower local models.
+  Default: 120
+
+AEON_V1_LLM_MAX_TOKENS
+  Maximum tokens the LLM will generate per call. Lower this for faster responses on small local models.
+  Default: 1200
+
+AEON_V1_LLM_TOOL_CALLING
+  Enable tool-calling path for reflect/simulate. When True, the LLM queries the MemoryIndexAgent
+  instead of receiving all memories inlined in the prompt.
+  Default: 0
+
+AEON_V1_LLM_MAX_ATTEMPTS
+  (code constant _LM_STUDIO_MAX_ATTEMPTS in llm.py) Max retry attempts for lmstudio calls before giving up.
+  Also caps the number of tool-call rounds in generate_with_memory().
+  Currently hardcoded to 5. Not yet configurable via env.
+
+ANTHROPIC_API_KEY
+  API key for the Anthropic provider. Required only when AEON_V1_LLM_PROVIDER=anthropic.
+  Default: (none)

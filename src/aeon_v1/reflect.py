@@ -2,7 +2,13 @@ from typing import Dict, List, Optional, Tuple
 
 from .config import Config
 from .evaluate import EvaluationStore
-from .llm import build_reflection_prompt, generate_text, parse_reflection_sections
+from .llm import (
+    build_reflection_prompt,
+    build_reflection_prompt_sparse,
+    generate_text,
+    generate_with_memory,
+    parse_reflection_sections,
+)
 from .memory_store import MemoryStore, _wikilink
 from .tasks import create_tasks_from_reflection
 from .time_utils import local_now_string, utc_now_iso
@@ -277,7 +283,12 @@ def _generate_reflection(analysis: Dict, config: Optional[Config] = None) -> str
     llm_meta: Dict = {"llm_used": False, "llm_model": None, "llm_provider": None}
 
     if config is not None:
-        llm_text = generate_text(build_reflection_prompt(analysis), config)
+        if config.llm_tool_calling:
+            from .memory_index_agent import MemoryIndexAgent
+            agent = MemoryIndexAgent(config)
+            llm_text = generate_with_memory(build_reflection_prompt_sparse(analysis), agent, config)
+        else:
+            llm_text = generate_text(build_reflection_prompt(analysis), config)
         if llm_text:
             llm_sections = parse_reflection_sections(llm_text)
             if llm_sections:

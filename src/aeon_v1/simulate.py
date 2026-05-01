@@ -19,7 +19,13 @@ import re
 from typing import Dict, List, Optional
 
 from .config import Config
-from .llm import build_simulation_prompt, generate_text, parse_simulation_sections
+from .llm import (
+    build_simulation_prompt,
+    build_simulation_prompt_sparse,
+    generate_text,
+    generate_with_memory,
+    parse_simulation_sections,
+)
 from .memory_store import _generate_id, _wikilink
 from .tasks import TaskStore
 from .time_utils import local_date_time_string, utc_now_iso
@@ -173,7 +179,12 @@ def simulate_action(task: Dict, config: Optional[Config] = None) -> Dict:
     llm_sections: Dict = {}
 
     if config.llm_enabled:
-        llm_text = generate_text(build_simulation_prompt(task), config)
+        if config.llm_tool_calling:
+            from .memory_index_agent import MemoryIndexAgent
+            agent = MemoryIndexAgent(config)
+            llm_text = generate_with_memory(build_simulation_prompt_sparse(task), agent, config)
+        else:
+            llm_text = generate_text(build_simulation_prompt(task), config)
         if llm_text:
             llm_sections = parse_simulation_sections(llm_text)
             if llm_sections:

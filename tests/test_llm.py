@@ -58,7 +58,7 @@ def test_llm_env_zero_means_disabled(monkeypatch):
 def test_llm_config_defaults():
     cfg = Config()
     assert cfg.llm_provider == "anthropic"
-    assert cfg.llm_model == "claude-3-5-sonnet-latest"
+    assert cfg.llm_model == "claude-sonnet-4-6"
     assert cfg.llm_temperature == 0.2
     assert cfg.llm_max_tokens == 1200
     assert cfg.llm_timeout_seconds == 60

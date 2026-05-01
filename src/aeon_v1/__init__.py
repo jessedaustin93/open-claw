@@ -1,6 +1,7 @@
 from .agent import AGENT_ROLES, AgentNode
 from .approval_agent import ApprovalAgent, AuthProvider, CLIAuthProvider
 from .manifest_agent import DriftReport, ManifestAgent, ToolAdditionStore
+from .memory_index_agent import MemoryIndexAgent
 from .builtin_tools import BUILTIN_TOOLS, COMMAND_PREVIEW, FILE_READ, FILE_WRITE, register_builtin_tools
 from .config import Config
 from .decision import DecisionStore, select_next_task
@@ -43,6 +44,7 @@ __all__ = [
     "FILE_READ",
     "FILE_WRITE",
     "ManifestAgent",
+    "MemoryIndexAgent",
     "MemoryStore",
     "Orchestrator",
     "PathGuard",
