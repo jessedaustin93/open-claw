@@ -26,6 +26,7 @@ VALID_ACTIONS: frozenset = frozenset({
     "reject",
     "commit",
     "read",
+    "run",      # orchestrator → agent: execute one work cycle
 })
 
 # Required keys per schema

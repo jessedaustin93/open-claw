@@ -64,7 +64,7 @@ class Config:
         self.llm_model: str = os.environ.get("AEON_V1_LLM_MODEL", "claude-sonnet-4-6")
         self.llm_temperature: float = 0.2
         self.llm_max_tokens: int = int(os.environ.get("AEON_V1_LLM_MAX_TOKENS", "1200"))
-        self.llm_timeout_seconds: int = int(os.environ.get("AEON_V1_LLM_TIMEOUT", "120"))
+        self.llm_timeout_seconds: int = int(os.environ.get("AEON_V1_LLM_TIMEOUT", "60"))
         # LM Studio / OpenAI-compatible local server
         self.llm_base_url: str = os.environ.get("AEON_V1_LLM_BASE_URL", "http://localhost:1234/v1")
         # When True, reflect/simulate use tool calling so the LLM queries the

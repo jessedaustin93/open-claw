@@ -1,5 +1,6 @@
 from .agent import AGENT_ROLES, AgentNode
 from .approval_agent import ApprovalAgent, AuthProvider, CLIAuthProvider
+from .bus import MessageBus, MessageBusError, get_bus
 from .manifest_agent import DriftReport, ManifestAgent, ToolAdditionStore
 from .memory_index_agent import MemoryIndexAgent
 from .builtin_tools import BUILTIN_TOOLS, COMMAND_PREVIEW, FILE_READ, FILE_WRITE, register_builtin_tools
@@ -30,6 +31,8 @@ from .write_agent import WriteAgent, create_proposal
 __all__ = [
     "AGENT_ROLES",
     "AgentNode",
+    "MessageBus",
+    "MessageBusError",
     "ApprovalAgent",
     "AuditLog",
     "AuthProvider",
@@ -65,6 +68,7 @@ __all__ = [
     "create_tasks_from_reflection",
     "evaluate_simulation",
     "generate_text",
+    "get_bus",
     "ingest",
     "link_memories",
     "local_date_time_string",

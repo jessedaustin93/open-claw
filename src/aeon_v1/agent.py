@@ -15,10 +15,12 @@ primitive is imported or invoked here. vault/core/ is never written.
 import json
 from typing import Any, Dict, List, Optional
 
+from .bus import get_bus
 from .config import Config
 from .decision import DecisionStore, select_next_task
 from .evaluate import EvaluationStore, evaluate_simulation
 from .memory_store import _generate_id, _wikilink
+from .schemas import make_agent_message
 from .simulate import SimulationStore, simulate_action
 from .tasks import TaskStore
 from .time_utils import local_date_time_string, utc_now_iso
@@ -77,6 +79,7 @@ class AgentNode:
 
         self._ensure_dirs()
         self._persist()
+        get_bus().subscribe(f"agent.run.{self.id}", self._handle_bus_message)
 
     # ---------------------------------------------------------------- lifecycle
 
@@ -104,8 +107,20 @@ class AgentNode:
 
     def dissolve(self) -> None:
         """Mark the agent as dissolved (terminal state)."""
+        get_bus().unsubscribe(f"agent.run.{self.id}", self._handle_bus_message)
         self._transition("dissolved")
         self._persist()
+
+    # ---------------------------------------------------------------- bus entry point
+
+    def _handle_bus_message(self, message: Dict) -> Dict:
+        """Receive a run request from the bus and execute it.
+
+        Called by the Orchestrator via bus.request("agent.run.<id>", msg).
+        The message payload carries any kwargs forwarded to run().
+        """
+        kwargs = message.get("payload", {})
+        return self.run(**kwargs)
 
     # ---------------------------------------------------------------- internal
 
@@ -283,6 +298,8 @@ class AgentNode:
         node.run_count        = data.get("run_count", 0)
         node.results          = []
         node._ensure_dirs()
+        if node.status != "dissolved":
+            get_bus().subscribe(f"agent.run.{node.id}", node._handle_bus_message)
         return node
 
     def to_dict(self) -> Dict:

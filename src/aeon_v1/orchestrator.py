@@ -18,8 +18,10 @@ import json
 from typing import Dict, List, Optional
 
 from .agent import AGENT_ROLES, AgentNode
+from .bus import get_bus
 from .config import Config
 from .memory_store import _generate_id
+from .schemas import make_agent_message
 from .simulate import SimulationStore
 from .tasks import TaskStore
 from .time_utils import utc_now_iso
@@ -63,23 +65,60 @@ class Orchestrator:
             "evaluator":  None,
         }
 
+        bus = get_bus()
+        now = utc_now_iso()
+
         # 1. Monitor
         monitor = self._ensure_monitor()
         if monitor.status == "idle":
-            summary["monitor"] = monitor.run()
+            summary["monitor"] = bus.request(
+                f"agent.run.{monitor.id}",
+                make_agent_message(
+                    agent_id="orchestrator",
+                    action="run",
+                    target=monitor.id,
+                    payload={},
+                    status="pending",
+                    timestamp=now,
+                    requires_approval=False,
+                ),
+            )
 
         # 2. Thinkers
         self._fill_thinker_pool()
         for node in self._pool_by_role("thinker"):
             if node.status == "idle":
-                summary["thinkers"].append(node.run())
+                result = bus.request(
+                    f"agent.run.{node.id}",
+                    make_agent_message(
+                        agent_id="orchestrator",
+                        action="run",
+                        target=node.id,
+                        payload={},
+                        status="pending",
+                        timestamp=now,
+                        requires_approval=False,
+                    ),
+                )
+                summary["thinkers"].append(result)
 
         # 3. Executor — one pending task per tick
         pending = TaskStore(self.config).list_tasks(status="pending")
         if pending:
             task = pending[0]
             executor = self.spawn("executor", tags=["auto"])
-            summary["executor"] = executor.run(task=task)
+            summary["executor"] = bus.request(
+                f"agent.run.{executor.id}",
+                make_agent_message(
+                    agent_id="orchestrator",
+                    action="run",
+                    target=executor.id,
+                    payload={"task": task},
+                    status="pending",
+                    timestamp=now,
+                    requires_approval=False,
+                ),
+            )
             executor.dissolve()
             self._remove_dissolved()
 
@@ -88,7 +127,18 @@ class Orchestrator:
         unreviewed = [s for s in sim_store.list_simulations() if s.get("feedback") == "unknown"]
         if unreviewed:
             evaluator = self.spawn("evaluator", tags=["auto"])
-            summary["evaluator"] = evaluator.run(simulation_id=unreviewed[0]["id"])
+            summary["evaluator"] = bus.request(
+                f"agent.run.{evaluator.id}",
+                make_agent_message(
+                    agent_id="orchestrator",
+                    action="run",
+                    target=evaluator.id,
+                    payload={"simulation_id": unreviewed[0]["id"]},
+                    status="pending",
+                    timestamp=now,
+                    requires_approval=False,
+                ),
+            )
             evaluator.dissolve()
             self._remove_dissolved()
 

@@ -23,10 +23,11 @@ import urllib.error
 from typing import Dict, List, Optional
 
 from .config import Config
+from .time_utils import utc_now_iso
 
-# Hard cap: at most 10 requests may be in-flight to LM Studio at once.
-# If the queue is full, new requests return None immediately.
-# TODO: replace with proper queue in the message bus when it is built.
+# Hard cap: at most 10 concurrent HTTP requests to LM Studio.
+# This governs external HTTP concurrency, not inter-agent messaging.
+# Inter-agent communication goes through the message bus (bus.py).
 _LM_STUDIO_MAX_QUEUE = 10
 _lm_studio_semaphore = threading.BoundedSemaphore(_LM_STUDIO_MAX_QUEUE)
 
@@ -151,9 +152,13 @@ def generate_with_memory(
     fetch relevant memories before producing a final text response.
     Falls back to generate_text() for providers that don't support tool calling.
 
+    All communication between the LLM loop and index_agent goes through the
+    message bus — index_agent._handle_bus_query is registered transiently for
+    the duration of this call and removed when it returns.
+
     Args:
         prompt:      The task prompt (no memory content inlined).
-        index_agent: MemoryIndexAgent instance that handles tool calls.
+        index_agent: MemoryIndexAgent instance whose bus handler is used.
         config:      Aeon-V1 Config.
 
     Returns:
@@ -163,16 +168,26 @@ def generate_with_memory(
         config = Config()
     if not config.llm_enabled:
         return None
-    if config.llm_provider == "lmstudio":
-        return _call_lmstudio_with_tools(prompt, index_agent, config)
-    # Other providers: fall back to inlined prompt (no tool calling)
-    return generate_text(prompt, config)
+
+    from .bus import get_bus
+    bus = get_bus()
+    bus.subscribe("memory.query", index_agent._handle_bus_query)
+    try:
+        if config.llm_provider == "lmstudio":
+            return _call_lmstudio_with_tools(prompt, config)
+        # Other providers: fall back to inlined prompt (no tool calling)
+        return generate_text(prompt, config)
+    finally:
+        bus.unsubscribe("memory.query", index_agent._handle_bus_query)
 
 
-def _call_lmstudio_with_tools(prompt: str, index_agent, config: Config) -> Optional[str]:
-    """Tool-calling loop for LM Studio: LLM queries memory agent, then responds."""
+def _call_lmstudio_with_tools(prompt: str, config: Config) -> Optional[str]:
+    """Tool-calling loop for LM Studio: LLM queries memory agent via bus, then responds."""
     if not _lm_studio_semaphore.acquire(blocking=False):
         return None
+
+    from .bus import get_bus
+    from .schemas import make_agent_message
 
     url = f"{config.llm_base_url.rstrip('/')}/chat/completions"
     messages: List[Dict] = [{"role": "user", "content": prompt}]
@@ -205,14 +220,23 @@ def _call_lmstudio_with_tools(prompt: str, index_agent, config: Config) -> Optio
             if choice.get("finish_reason") == "tool_calls" or message.get("tool_calls"):
                 messages.append(message)
                 for tc in message.get("tool_calls", []):
-                    result = index_agent.handle_tool_call(
-                        tc["function"]["name"],
-                        tc["function"]["arguments"],
+                    bus_msg = make_agent_message(
+                        agent_id="llm",
+                        action="read",
+                        target="memory_index",
+                        payload={
+                            "name":      tc["function"]["name"],
+                            "arguments": tc["function"]["arguments"],
+                        },
+                        status="pending",
+                        timestamp=utc_now_iso(),
+                        requires_approval=False,
                     )
+                    result = get_bus().request("memory.query", bus_msg)
                     messages.append({
                         "role":         "tool",
                         "tool_call_id": tc["id"],
-                        "content":      result,
+                        "content":      result or "{}",
                     })
                 continue  # send tool results back to LLM
 

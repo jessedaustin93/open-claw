@@ -99,3 +99,15 @@ class MemoryIndexAgent:
             memory_types=args.get("memory_types"),
         )
         return json.dumps(results, ensure_ascii=False)
+
+    def _handle_bus_query(self, message: Dict) -> str:
+        """Bus entry point — called via bus.request("memory.query", msg).
+
+        Registered transiently by generate_with_memory() around each LLM call.
+        Returns the JSON string result expected by the LLM tool-call loop.
+        """
+        payload = message.get("payload", {})
+        return self.handle_tool_call(
+            payload.get("name", ""),
+            payload.get("arguments", "{}"),
+        )
