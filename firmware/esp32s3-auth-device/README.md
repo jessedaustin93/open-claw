@@ -32,7 +32,7 @@ Messages are newline-delimited JSON over USB serial at `115200`.
 Device announces itself:
 
 ```json
-{"type":"hello","device":"open-claw-auth","version":"1.0.0","button_pin":0,"capabilities":["physical_approval","button_hold"]}
+{"type":"hello","device":"aeon-v1-auth","version":"1.0.0","button_pin":0,"capabilities":["physical_approval","button_hold"]}
 ```
 
 PC arms a specific approval request:
@@ -75,7 +75,7 @@ agent = ApprovalAgent(
 agent.process_queue()
 ```
 
-If `port` is omitted, the provider scans serial ports for a `hello` response from `open-claw-auth`.
+If `port` is omitted, the provider scans serial ports for a `hello` response from `aeon-v1-auth`.
 
 Install the optional PC-side serial dependency with:
 
