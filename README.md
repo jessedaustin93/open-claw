@@ -4,7 +4,7 @@ Aeon-V1 is a **local-first recursive AI memory and learning system** built on pl
 
 It stores raw inputs, promotes important memories into episodic and semantic layers, reflects on what it has learned, turns reflections into tasks, simulates possible actions, and gates agent-initiated writes through a human approval pipeline. The system is designed to stay inspectable: every durable record lives in `memory/` for machines and, where useful, in `vault/` for humans and Obsidian.
 
-Aeon-V1 is not an autonomous executor. It is a governed memory and reasoning substrate.
+Aeon-V1 is not an autonomous executor. It is a governed memory and reasoning substrate with a chat-style front door.
 
 ---
 
@@ -12,6 +12,7 @@ Aeon-V1 is not an autonomous executor. It is a governed memory and reasoning sub
 
 | Area | Status | Main modules |
 |---|---|---|
+| Chat-style terminal interface | Implemented | `chat_cli.py`, `scripts/aeon_chat.py`, `Aeon Chat.bat` |
 | Raw memory ingestion | Implemented | `ingest.py`, `memory_store.py` |
 | Episodic and semantic promotion | Implemented | `ingest.py`, `memory_store.py` |
 | Recursive reflection | Implemented | `reflect.py` |
@@ -24,7 +25,7 @@ Aeon-V1 is not an autonomous executor. It is a governed memory and reasoning sub
 | Layer 7 write governance | Implemented and locked | `schemas.py`, `security.py`, `approval_agent.py`, `write_agent.py` |
 | Manifest drift monitoring | Implemented | `manifest_agent.py` |
 | Optional LLM reasoning | Implemented | `llm.py`, `memory_index_agent.py` |
-| ESP32-S3 hardware approval token | Added on hardware auth branch | `hardware_auth_provider.py`, `firmware/esp32s3-auth-device/` |
+| ESP32-S3 hardware approval token | Implemented | `hardware_auth_provider.py`, `firmware/esp32s3-auth-device/` |
 | Vector embeddings | Planned | `search.py` is vector-ready |
 | Real command execution | Out of scope | No execution path exists |
 
@@ -43,8 +44,42 @@ pip install -e ".[dev]"
 Optional extras:
 
 ```bash
-pip install anthropic       # Optional Claude/Anthropic LLM support
+pip install anthropic        # Optional Claude/Anthropic LLM support
 pip install -e ".[hardware]" # Optional ESP32-S3 USB approval provider
+```
+
+### Open The Chat Interface
+
+On Windows, double-click:
+
+```text
+Aeon Chat.bat
+```
+
+Or launch from a terminal:
+
+```bash
+python scripts/aeon_chat.py
+```
+
+If installed in editable mode, you can also run:
+
+```bash
+aeon-chat
+```
+
+Inside the chat, type naturally. Aeon stores the conversation, searches local memory for context, uses the configured LLM when available, and falls back to local memory summaries when LLM mode is off.
+
+Useful chat commands:
+
+```text
+/help              show commands
+/status            show memory + LLM status
+/memory <query>    search local memory
+/reflect           run one reflection pass
+/tick              run one orchestrator cycle
+/transcript        show transcript path
+/exit              close the chat
 ```
 
 ### Run Tests
@@ -53,7 +88,7 @@ pip install -e ".[hardware]" # Optional ESP32-S3 USB approval provider
 pytest
 ```
 
-### Ingest Memory
+### Ingest Memory Directly
 
 ```bash
 python scripts/ingest_text.py "I learned that layered memory systems are more robust than flat logs."
@@ -86,6 +121,37 @@ link_memories(config=Config())
 
 ---
 
+## Chat Interface
+
+`chat_cli.py` is the first normal-user interface for Aeon. It sits between a plain CLI and a full UI: simple enough to launch from an icon, but wired into the memory system.
+
+Per chat turn, it can:
+
+- Store the user message as memory.
+- Retrieve relevant episodic, semantic, and reflection context.
+- Build an Aeon-style response prompt.
+- Use the configured LLM through `generate_text()` or `generate_with_memory()`.
+- Fall back to a local-memory answer if LLM mode is unavailable.
+- Store Aeon's reply as memory.
+- Link related vault notes.
+- Optionally run reflection every N turns.
+- Optionally run `Orchestrator.tick()` after every turn.
+- Append a JSONL transcript under `memory/chat/`.
+
+Launch options:
+
+```bash
+python scripts/aeon_chat.py --help
+python scripts/aeon_chat.py --reflect-every 5
+python scripts/aeon_chat.py --auto-tick
+python scripts/aeon_chat.py --transcript off
+python scripts/aeon_chat.py --no-ingest
+```
+
+The default mode avoids heavy background orchestration. It ingests, searches, responds, links memory, and logs the transcript. Use `/reflect`, `/tick`, `--reflect-every`, or `--auto-tick` when you want the deeper loops running from the chat shell.
+
+---
+
 ## Core Design
 
 Aeon-V1 keeps two synchronized views of memory:
@@ -115,6 +181,7 @@ Everything is local by default. No database is required. No cloud service is req
 | Simulations | `memory/simulations/`, `vault/simulations/` | Proposed actions and risk analysis; no execution |
 | Tool calls | `memory/tool_calls/`, `vault/tool_calls/` | Structured pending tool-call records from simulations |
 | Agents | `memory/agents/`, `vault/agents/` | Agent node lifecycle records and tool definitions |
+| Chat | `memory/chat/` | JSONL transcripts from the terminal chat interface |
 | Governance | `memory/staging/`, `memory/approved/`, `memory/logs/` | Layer 7 proposal, approval, commit, and audit trail |
 | Tool additions | `memory/tool_additions/` | Approved tool additions proposed through Layer 7 |
 | Orchestrator | `memory/orchestrator/` | Live agent-pool manifest |
@@ -175,7 +242,7 @@ Simulation remains file-only. `simulate.py` does not import or call subprocess, 
 
 ## Layer 4: Optional LLM Reasoning
 
-Aeon-V1 runs without an LLM. If enabled, LLM output enhances reflection and simulation narrative while the file-based system remains the source of truth.
+Aeon-V1 runs without an LLM. If enabled, LLM output enhances reflection, simulation, and chat responses while the file-based system remains the source of truth.
 
 Enable Anthropic/Claude mode:
 
@@ -286,13 +353,13 @@ Safety rules:
 - `vault/core/` is not written by Layer 7.
 - Layer 7 stable modules are marked: `LAYER 7 STABLE - DO NOT MODIFY WITHOUT EXPLICIT INSTRUCTION`.
 
-`AuthProvider` is the plug-in point for approval mechanisms. The default is CLI yes/no approval; the ESP32-S3 provider is available on the hardware auth branch.
+`AuthProvider` is the plug-in point for approval mechanisms. The default is CLI yes/no approval; the ESP32-S3 provider is available for hardware approval.
 
 ---
 
 ## ESP32-S3 Hardware Approval Device
 
-This branch adds a dedicated one-button USB approval token for Layer 7.
+Aeon includes a dedicated one-button USB approval token for Layer 7.
 
 Files:
 
@@ -382,6 +449,7 @@ aeon-v1/
     agent.py                  Layer 6 agent node lifecycle
     approval_agent.py         Layer 7 human approval gate
     builtin_tools.py          Built-in tool definitions
+    chat_cli.py               Terminal chat interface
     config.py                 Paths, limits, LLM/env configuration
     decision.py               Task selection engine
     evaluate.py               Simulation evaluation
@@ -404,6 +472,7 @@ aeon-v1/
     tools.py                  Tool registry
     write_agent.py            Governed write commit stage
   scripts/
+    aeon_chat.py
     ingest_text.py
     manage_tasks.py
     run_reflection.py
@@ -427,6 +496,7 @@ Aeon-V1 is intentionally conservative:
 - Simulations do not execute actions.
 - Tool definitions do not call tools.
 - Tool-call records are pending review records.
+- Chat stores conversation memory and retrieves context; it does not bypass Layer 7.
 - Agent nodes do not call shell, subprocess, network, `exec`, or `eval` primitives.
 - Layer 7 requires validation and human approval before agent-initiated writes commit.
 - The hardware auth device is only a physical approval signal; it cannot commit memory by itself.
