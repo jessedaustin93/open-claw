@@ -128,6 +128,8 @@ def select_next_task(config: Optional[Config] = None) -> Dict:
     or
       {"decision": None, "task": None, "message": "..."}
     """
+    from .write_guard import assert_write_authorized
+    assert_write_authorized("select_next_task")
     if config is None:
         config = Config()
 

@@ -18,6 +18,8 @@ def ingest(text: str, source: str = "manual", config: Optional[Config] = None) -
     Promotes to episodic if importance >= threshold,
     and further to semantic if semantic keywords are present.
     """
+    from .write_guard import assert_write_authorized
+    assert_write_authorized("ingest")
     if config is None:
         config = Config()
 

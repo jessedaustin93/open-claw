@@ -47,6 +47,8 @@ def reflect(config: Optional[Config] = None) -> Dict:
     - Passes with the same source IDs as a prior reflection are skipped
       unless config.skip_duplicate_reflections is False.
     """
+    from .write_guard import assert_write_authorized
+    assert_write_authorized("reflect")
     if config is None:
         config = Config()
 

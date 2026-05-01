@@ -342,7 +342,7 @@ def compact(text: str, limit: int) -> str:
         return one_line
     cutoff = max(0, limit - 3)
     shortened = one_line[:cutoff].rstrip()
-    if " " in shortened:
+    if cutoff < len(one_line) and one_line[cutoff] != " " and " " in shortened:
         shortened = shortened.rsplit(" ", 1)[0]
     return shortened + "..."
 

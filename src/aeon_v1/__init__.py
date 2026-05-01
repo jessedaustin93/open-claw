@@ -1,5 +1,8 @@
 from .agent import AGENT_ROLES, AgentNode
 from .approval_agent import ApprovalAgent, AuthProvider, CLIAuthProvider
+from .bus import MessageBus, MessageBusError, get_bus
+from .data_write_agent import DataWriteAgent
+from .write_guard import WriteAuthorizationError, agent_run_context, is_write_authorized
 from .hardware_auth_provider import ESP32S3AuthProvider, HardwareAuthError
 from .manifest_agent import DriftReport, ManifestAgent, ToolAdditionStore
 from .memory_index_agent import MemoryIndexAgent
@@ -31,6 +34,10 @@ from .write_agent import WriteAgent, create_proposal
 __all__ = [
     "AGENT_ROLES",
     "AgentNode",
+    "DataWriteAgent",
+    "MessageBus",
+    "MessageBusError",
+    "WriteAuthorizationError",
     "ApprovalAgent",
     "AuditLog",
     "AuthProvider",
@@ -68,7 +75,10 @@ __all__ = [
     "create_tasks_from_reflection",
     "evaluate_simulation",
     "generate_text",
+    "agent_run_context",
+    "get_bus",
     "ingest",
+    "is_write_authorized",
     "link_memories",
     "local_date_time_string",
     "local_now_string",
