@@ -1,289 +1,32 @@
 # Aeon-V1
 
-A **local-first recursive AI memory and learning system** built on plain files.
+Aeon-V1 is a **local-first recursive AI memory and learning system** built on plain JSON and Markdown files.
 
-Aeon-V1 stores knowledge in layered memory — raw captures, episodic summaries, semantic concepts, and recursive reflections — using Markdown and JSON so that humans and agents can both read and extend it.
+It stores raw inputs, promotes important memories into episodic and semantic layers, reflects on what it has learned, turns reflections into tasks, simulates possible actions, and gates agent-initiated writes through a human approval pipeline. The system is designed to stay inspectable: every durable record lives in `memory/` for machines and, where useful, in `vault/` for humans and Obsidian.
 
----
-
-## What Aeon-V1 Is
-
-Aeon-V1 is a structured memory framework, not an autonomous AI.  
-It gives any agent (or human) a place to:
-
-- Store raw input exactly as received
-- Automatically promote high-importance notes to richer memory layers
-- Generate recursive reflections that analyze what has been learned
-- Search across all memory with plain-text queries
-- Link related notes automatically via Obsidian wikilinks
-
-Everything lives in local files. No cloud. No database. No external API required.
+Aeon-V1 is not an autonomous executor. It is a governed memory and reasoning substrate.
 
 ---
 
-## Why Raw Memory Is Preserved
+## Current Capabilities
 
-Raw memories are **immutable** — they are never overwritten, summarized, or deleted.
-
-This is a core design principle borrowed from append-only logs and MemPalace-style storage:
-
-- Summarization always loses information
-- Originals can be re-analyzed with better algorithms later
-- Human auditors can trace every piece of knowledge back to its source
-- Reversing or correcting errors is possible because the source always exists
-
-Episodic and semantic memories are derived from raws, not replacements for them.
-
----
-
-## Memory Layers
-
-| Layer | Directory | Purpose |
+| Area | Status | Main modules |
 |---|---|---|
-| **Raw** | `vault/raw/`, `memory/raw/` | Exact verbatim captures — never modified |
-| **Episodic** | `vault/episodic/`, `memory/episodic/` | Summarized meaningful events |
-| **Semantic** | `vault/semantic/`, `memory/semantic/` | Reusable concepts, rules, and patterns |
-| **Core** | `vault/core/` | Stable identity, long-term rules, goals |
-| **Reflections** | `vault/reflections/`, `memory/reflections/` | Recursive analysis of prior memories |
-| **Tasks** | `vault/tasks/`, `memory/tasks/` | Structured task objects derived from reflection suggested_tasks |
-| **Decisions** | `vault/decisions/`, `memory/decisions/` | Append-only decision records from the selection engine |
-| **Simulations** | `vault/simulations/`, `memory/simulations/` | Proposed-action records — never executed automatically |
-| **Agents** | `vault/agents/` | Agent-specific configurations and notes |
-
----
-
-## How Obsidian Is Used
-
-### Quick Start
-
-1. Clone the repository (or `git pull` the latest branch)
-2. Open **Obsidian** → **Open folder as vault** → select the `vault/` directory
-3. Start from [`vault/index.md`](vault/index.md) — it links all memory layers
-4. Use `Ctrl+G` for the graph view, backlinks panel for tracing, and tag search for filtering
-
-Obsidian is **not required**. All files are plain Markdown readable in any editor.
-
----
-
-Every stored memory creates a Markdown file inside `vault/`.  
-Each file uses YAML frontmatter and Obsidian-style `[[wikilinks]]` to connect related notes.
-
-Example note:
-
-```markdown
----
-id: a1b2c3d4
-title: i-learned-that-recursive-memory
-type: episodic
-created: 2024-01-15T10:30:00
-source: manual
-importance: 0.75
-tags:
-  - learning
-  - project
-links:
-  - "[[raw/9e8f7a6b|i-learned-that-building]]"
----
-
-# i-learned-that-recursive-memory
-
-**Summary:** I learned that recursive memory systems need layered storage.
-
-**Source:** [[raw/9e8f7a6b|i-learned-that-building]]
-
-[[Episodic Memory]] | [[Semantic Memory]] | [[Reflections]]
-```
-
-### ID vs Title
-
-Every record has two identifiers:
-
-| Field | Example | Stable? |
-|---|---|---|
-| `id` | `a1b2c3d4` | **Yes** — permanent, used in filenames and cross-references |
-| `title` | `i-learned-that-recursive-memory` | Derived — for human readability only |
-
-Filenames are always `{id}.md`. Wikilinks use `[[subdir/id|title]]` format so they resolve correctly to the file while displaying readable text in Obsidian.
-
-Open the `vault/` folder as an Obsidian vault to get the graph view, backlinks, and tag explorer — but Obsidian is **not required**.  
-All files are plain Markdown readable in any editor.
-
----
-
-## How MemPalace-Style Storage Works
-
-MemPalace-style storage means every memory has a **specific place** and stays there.
-
-- `raw/` is the permanent record — the source of truth
-- `episodic/` is organized by event and time
-- `semantic/` is organized by concept
-- `reflections/` is organized by analysis session
-
-Nothing is deleted. Nothing is overwritten. New insights create new files.  
-The system grows by accumulation, not replacement.
-
----
-
-## How Recursive Reflection Works
-
-The reflection engine reads all episodic and semantic memories and produces a new reflection note that asks:
-
-1. What did the system learn?
-2. What themes repeat?
-3. What is most important?
-4. What should become long-term core memory?
-5. What tasks or experiments are implied?
-
-The current engine is rule-based. The `reflect.py:_generate_reflection(analysis)` function is the single LLM swap point — replace its body with an API call when you are ready for AI-generated analysis. The caller and storage path do not need to change.
-
-**Layer 2 — Reflection Quality** (implemented): Each reflection pass now runs a structured analysis (`_analyse()`) before rendering, producing a 7-section note and persisting rich metadata in the JSON record: `confidence`, `source_types`, `suggested_tasks`, `suggested_core_updates`, `detected_patterns`, `uncertainty_notes`, `generated_at`. Duplicate passes (same source IDs as a prior reflection) are skipped by default (`skip_duplicate_reflections = True`). Passes with too few sources are skipped unless `allow_low_value_reflections = True`.
-
-**Reflection safety limits** (configurable in `Config`):
-- Reviews episodic and semantic memories only — never prior reflections (prevents runaway loops)
-- Capped at 50 source memories per pass by default (`max_memories_per_reflection`)
-- Core memory suggestions are written inside the reflection note itself, clearly marked as requiring human review — never written to `vault/core/` automatically
-
----
-
-## Layer 3 — Decision and Action Simulation
-
-**Layer 3 — Decision and Action Simulation** (implemented): Extends the reflection loop into structured propose → decide → simulate, while remaining fully local and human-gated.
-
-### How Tasks Flow from Reflection
-
-Every `reflect()` call automatically converts its `suggested_tasks` list into stored task objects in `memory/tasks/` and `vault/tasks/`. Near-duplicate tasks (Jaccard word-overlap ≥ 0.8) are silently blocked.
-
-### Decision Engine
-
-`select_next_task()` scores all pending tasks by `priority × 0.5 + confidence × 0.3`, selects the highest scorer, marks it `selected`, and writes an append-only decision record to `memory/decisions/`.
-
-### Action Simulation
-
-`simulate_action(task)` produces a structured simulation record describing what *would* happen — proposed action, expected outcome, and risk signals — and stores it in `memory/simulations/` and `vault/simulations/`. **No real commands are executed.** `subprocess`, `os.system`, and every execution primitive are absent from `simulate.py` by design. The `enable_real_actions` config flag is `False` permanently — there is no code path that enables execution.
-
-### CLI
-
-```bash
-python scripts/manage_tasks.py tasks     # list pending tasks
-python scripts/manage_tasks.py decide    # select best task, write decision record
-python scripts/manage_tasks.py simulate  # simulate selected task
-python scripts/manage_tasks.py loop      # decide + simulate once
-```
-
-### Why Simulation Instead of Execution
-
-Execution requires explicit per-action human approval, sandboxing, and rollback mechanisms. Layer 3 builds the planning substrate — structured task objects, scored decisions, and detailed simulation records — so that when real tool use is added, the reasoning layer already exists and is fully auditable.
-
----
-
-## Layer 4 — Optional LLM Reasoning
-
-Aeon-V1 works fully without an LLM. Layer 4 adds **optional AI narrative enhancement** to reflection and simulation records while keeping all existing behavior intact.
-
-**The LLM is not the memory authority.** The file-based Aeon-V1 system remains the source of truth. The LLM only improves the quality of reflection text and simulation planning text.
-
-### What the LLM improves
-
-| Record | LLM-enhanced sections | Always rule-based |
-|---|---|---|
-| Reflection | What Was Learned, New Patterns Noticed, Conflicts or Uncertainty, Suggested Tasks | Important Memories Reviewed, Suggested Core Memory Updates, Reflection Quality |
-| Simulation | Proposed action, expected outcome, risk bullets | Human approval flag, execution safety checks |
-
-### Enabling LLM
-
-```bash
-# Linux / macOS
-export AEON_V1_LLM=1
-export ANTHROPIC_API_KEY=your_key_here
-python scripts/run_reflection.py
-python scripts/manage_tasks.py simulate
-
-# PowerShell
-$env:AEON_V1_LLM="1"
-$env:ANTHROPIC_API_KEY="your_key_here"
-```
-
-Optional dependency (not required for anything else):
-```bash
-pip install anthropic
-```
-
-### Fallback behavior
-
-If `AEON_V1_LLM` is not set, the API key is missing, `anthropic` is not installed, or the API call fails for any reason, `generate_text()` returns `None` and the rule-based path runs unchanged. No crash. No silent data change.
-
-### What the LLM never does
-
-- Write to `vault/core/` — core memory remains human-gated
-- Execute commands, call subprocess, or trigger real actions
-- Alter `source_ids`, stored metadata, or the memory authority
-- Remove the core memory warning from reflection notes
-
-### LLM metadata in JSON records
-
-Every reflection and simulation JSON record includes:
-
-```json
-{
-  "llm_used": false,
-  "llm_model": null,
-  "llm_provider": null
-}
-```
-
-These fields are `true` / model name / provider name when LLM was used.
-
----
-
-## Timestamps and Timezones
-
-Aeon-V1 uses a two-layer timestamp strategy to avoid timezone bugs while keeping notes readable:
-
-| Location | Format | Example |
-|---|---|---|
-| JSON records (`created`, `created_at`, `generated_at`) | UTC ISO-8601 with `+00:00` offset | `2026-04-28T21:07:13.050967+00:00` |
-| Markdown notes and CLI output | Local time (configurable) | `2026-04-28 5:07 PM EDT` |
-
-**Default display timezone:** `America/New_York` — change it in `Config.display_timezone`.
-
-```python
-from aeon_v1 import Config
-config = Config()
-config.display_timezone = "Europe/London"   # or any IANA name
-```
-
-All helpers live in `src/aeon_v1/time_utils.py`:
-
-| Function | Returns |
-|---|---|
-| `utc_now_iso()` | `'2026-04-28T21:07:13+00:00'` |
-| `local_time_string(ts, tz)` | `'5:07 PM EDT'` |
-| `local_date_time_string(ts, tz)` | `'2026-04-28 5:07 PM EDT'` |
-| `local_now_string(tz)` | current local date + time |
-
-Timezone conversion uses `zoneinfo` (stdlib, Python 3.9+). On systems without the OS timezone database, install `tzdata`:
-
-```bash
-pip install tzdata
-```
-
----
-
-## Safety and Control
-
-Aeon-V1 is a **local memory framework**, not an autonomous uncontrolled agent.
-
-- All files are local and human-readable at all times
-- No action is taken without an explicit script invocation
-- Memory is append-only — raw records are never overwritten; reflections and decisions always create new files
-- Every memory traces back to its raw source via `raw_ref` and `source_ids` fields
-- The reflection engine does not execute tasks — it only writes notes and proposed task objects
-- The simulation engine writes files only — no subprocess, os.system, or network calls exist in `simulate.py`
-- **`vault/core/` is human-gated and enforced in code.** `_write_markdown` raises `CoreMemoryProtectedError` on any attempt to write there. The linker skips `vault/core/` files. Reflections produce suggestions only, inside `vault/reflections/`. Override with `config.allow_core_modification = True`.
-- Humans review, approve, and act on what the system learns
-
-This system supports transparency, reversibility, and full human oversight.  
-See `vault/core/PROTECTED.md` for the core memory protection contract.
+| Raw memory ingestion | Implemented | `ingest.py`, `memory_store.py` |
+| Episodic and semantic promotion | Implemented | `ingest.py`, `memory_store.py` |
+| Recursive reflection | Implemented | `reflect.py` |
+| Task creation from reflections | Implemented | `tasks.py` |
+| Decision selection | Implemented | `decision.py` |
+| Action simulation | Implemented, simulation-only | `simulate.py` |
+| Tool definitions and tool-call records | Implemented | `tools.py`, `builtin_tools.py`, `tool_calls.py` |
+| Simulation evaluation | Implemented | `evaluate.py` |
+| Agent nodes and orchestrator | Implemented | `agent.py`, `orchestrator.py` |
+| Layer 7 write governance | Implemented and locked | `schemas.py`, `security.py`, `approval_agent.py`, `write_agent.py` |
+| Manifest drift monitoring | Implemented | `manifest_agent.py` |
+| Optional LLM reasoning | Implemented | `llm.py`, `memory_index_agent.py` |
+| ESP32-S3 hardware approval token | Added on hardware auth branch | `hardware_auth_provider.py`, `firmware/esp32s3-auth-device/` |
+| Vector embeddings | Planned | `search.py` is vector-ready |
+| Real command execution | Out of scope | No execution path exists |
 
 ---
 
@@ -297,101 +40,406 @@ cd aeon-v1
 pip install -e ".[dev]"
 ```
 
+Optional extras:
+
+```bash
+pip install anthropic       # Optional Claude/Anthropic LLM support
+pip install -e ".[hardware]" # Optional ESP32-S3 USB approval provider
+```
+
 ### Run Tests
 
 ```bash
 pytest
 ```
 
-### Ingest a Memory
+### Ingest Memory
 
 ```bash
-# From the command line
 python scripts/ingest_text.py "I learned that layered memory systems are more robust than flat logs."
-
-# From a file
 python scripts/ingest_text.py --file my_notes.txt --source journal
-
-# From stdin
 echo "Important project goal: ship Aeon-V1 v1." | python scripts/ingest_text.py
 ```
 
-### Run Reflection
+### Reflect, Decide, Simulate
 
 ```bash
 python scripts/run_reflection.py
+python scripts/manage_tasks.py tasks
+python scripts/manage_tasks.py decide
+python scripts/manage_tasks.py simulate
+python scripts/manage_tasks.py loop
 ```
 
-### Search Memory
+### Search And Link
 
 ```bash
 python scripts/search_memory.py "recursive learning"
 python scripts/search_memory.py "goal" --types episodic semantic
 ```
 
-### Link Related Notes
-
 ```python
 from aeon_v1 import Config, link_memories
+
 link_memories(config=Config())
 ```
 
 ---
 
-## Example Flow
+## Core Design
 
-```
+Aeon-V1 keeps two synchronized views of memory:
+
+| Store | Purpose |
+|---|---|
+| `memory/` | Machine-readable JSON records, schemas, logs, staging, approvals |
+| `vault/` | Human-readable Markdown notes for Obsidian or any text editor |
+
+Raw memory is preserved because summaries lose information. Episodic and semantic memories are derived views, not replacements. Reflections and decisions are append-only records, so the system can be audited later.
+
+Everything is local by default. No database is required. No cloud service is required. LLM calls are optional.
+
+---
+
+## Memory Layers
+
+| Layer | Directories | Purpose |
+|---|---|---|
+| Raw | `memory/raw/`, `vault/raw/` | Exact verbatim captures |
+| Episodic | `memory/episodic/`, `vault/episodic/` | Event-like summaries of important inputs |
+| Semantic | `memory/semantic/`, `vault/semantic/` | Concepts, reusable rules, and patterns |
+| Core | `vault/core/` | Stable identity, long-term rules, goals; human-gated |
+| Reflections | `memory/reflections/`, `vault/reflections/` | Recursive analysis of episodic and semantic memory |
+| Tasks | `memory/tasks/`, `vault/tasks/` | Suggested actions derived from reflections |
+| Decisions | `memory/decisions/`, `vault/decisions/` | Append-only task selection records |
+| Simulations | `memory/simulations/`, `vault/simulations/` | Proposed actions and risk analysis; no execution |
+| Tool calls | `memory/tool_calls/`, `vault/tool_calls/` | Structured pending tool-call records from simulations |
+| Agents | `memory/agents/`, `vault/agents/` | Agent node lifecycle records and tool definitions |
+| Governance | `memory/staging/`, `memory/approved/`, `memory/logs/` | Layer 7 proposal, approval, commit, and audit trail |
+| Tool additions | `memory/tool_additions/` | Approved tool additions proposed through Layer 7 |
+| Orchestrator | `memory/orchestrator/` | Live agent-pool manifest |
+
+---
+
+## Recursive Loop
+
+```text
 Input text
-  └─> memory/raw/a1b2c3d4.json    (exact verbatim copy)
-  └─> vault/raw/a1b2c3d4.md
-
-If importance >= 0.5:
-  └─> memory/episodic/e5f6a7b8.json   (summarized event)
-  └─> vault/episodic/e5f6a7b8.md
-
-If semantic keywords found:
-  └─> memory/semantic/c9d0e1f2.json   (reusable concept)
-  └─> vault/semantic/c9d0e1f2.md
-
-After reflection pass:
-  └─> memory/reflections/r3a4b5c6.json
-  └─> vault/reflections/r3a4b5c6.md
+  -> raw memory
+  -> episodic memory, if importance >= threshold
+  -> semantic memory, if concept signals are present
+  -> reflection over episodic + semantic memory
+  -> suggested tasks
+  -> decision record
+  -> simulation record
+  -> human review / governed write
+  -> new input
 ```
+
+`reflect()` produces a seven-section reflection note:
+
+1. What Was Learned
+2. Important Memories Reviewed
+3. New Patterns Noticed
+4. Conflicts or Uncertainty
+5. Suggested Tasks
+6. Suggested Core Memory Updates
+7. Reflection Quality
+
+Reflections do not write to `vault/core/`. Core updates are suggestions only.
+
+---
+
+## Layer 3: Tasks, Decisions, Simulations
+
+Every reflection can create task objects from `suggested_tasks`. Near-duplicates are blocked with Jaccard word-overlap, and pending task count is capped by config.
+
+`select_next_task()` scores pending tasks by:
+
+```text
+priority * 0.5 + confidence * 0.3
+```
+
+`simulate_action(task)` creates a local simulation record with:
+
+- Proposed action
+- Expected outcome
+- Risk signals
+- Required human approval flag
+- Optional matched tool call
+- LLM metadata if LLM enhancement was used
+
+Simulation remains file-only. `simulate.py` does not import or call subprocess, shell, network, `exec`, or `eval` primitives.
+
+---
+
+## Layer 4: Optional LLM Reasoning
+
+Aeon-V1 runs without an LLM. If enabled, LLM output enhances reflection and simulation narrative while the file-based system remains the source of truth.
+
+Enable Anthropic/Claude mode:
+
+```bash
+export AEON_V1_LLM=1
+export ANTHROPIC_API_KEY=your_key_here
+```
+
+PowerShell:
+
+```powershell
+$env:AEON_V1_LLM="1"
+$env:ANTHROPIC_API_KEY="your_key_here"
+```
+
+Useful environment variables:
+
+| Variable | Purpose |
+|---|---|
+| `AEON_V1_LLM` | Set to `1` to enable LLM calls |
+| `AEON_V1_LLM_PROVIDER` | Provider name; defaults to `anthropic` |
+| `AEON_V1_LLM_MODEL` | Model name; defaults from `Config` |
+| `AEON_V1_LLM_MAX_TOKENS` | Max response tokens |
+| `AEON_V1_LLM_TIMEOUT` | Request timeout seconds |
+| `AEON_V1_LLM_BASE_URL` | Local/OpenAI-compatible server URL |
+| `AEON_V1_LLM_TOOL_CALLING` | Set to `1` to let the LLM query memory through `MemoryIndexAgent` |
+
+When tool-calling is enabled, `MemoryIndexAgent` services `query_memory` tool calls by searching local memory and returning bounded, formatted results. This keeps prompts sparse while still letting the model inspect relevant memory.
+
+LLM fallback is fail-safe: missing package, missing key, API failure, or disabled config all return to rule-based behavior.
+
+---
+
+## Layer 5: Tools And Tool Calls
+
+Aeon-V1 has a definition-only tool registry:
+
+- `ToolDefinition` describes a tool name, description, JSON-schema-like parameters, tags, layer, enabled flag, and approval requirement.
+- `ToolRegistry` persists tool definitions to `memory/schemas/tools/` and `vault/agents/`.
+- `builtin_tools.py` defines `file_read`, `file_write`, and `command_preview` as built-in tool slots.
+
+No registered tool is executed by the registry.
+
+During simulation, `_match_tool_call()` can map a task description to a registered tool and create a `pending_review` tool-call record through `ToolCallStore`. These records are auditable proposals, not executions.
+
+---
+
+## Layer 6: Agent Nodes And Orchestrator
+
+`AgentNode` is a single-purpose lifecycle-managed unit:
+
+```text
+spawn() -> run() -> dissolve()
+```
+
+Supported roles:
+
+| Role | Purpose |
+|---|---|
+| `thinker` | Runs reflection |
+| `executor` | Selects or receives a task, then simulates it |
+| `monitor` | Watches memory growth and can trigger reflection |
+| `evaluator` | Evaluates simulations against observed results |
+| `custom` | Caller-defined role with a required description |
+
+`Orchestrator.tick()` coordinates one synchronous work cycle:
+
+1. Ensures and runs a monitor agent.
+2. Fills the thinker pool up to `Config.max_thinking_agents`.
+3. Runs thinkers.
+4. Spawns an executor for one pending task.
+5. Spawns an evaluator for one unreviewed simulation.
+6. Dissolves task-specific agents and persists the pool manifest.
+
+Layer 6 still does not execute system commands. It coordinates memory, reflection, simulation, and evaluation only.
+
+---
+
+## Layer 7: Governed Writes
+
+Layer 7 enforces a proposal-to-commit pipeline for agent-initiated memory writes:
+
+```text
+create_proposal()
+  -> memory/staging/{trace_id}.json
+  -> ValidationAgent.validate_proposal()
+  -> ApprovalAgent.approve_proposal()
+  -> WriteAgent.commit_proposal()
+  -> memory/approved/{trace_id}.json + memory/logs/audit.jsonl
+```
+
+Key modules:
+
+| Module | Responsibility |
+|---|---|
+| `schemas.py` | Pure schema factories and validators |
+| `security.py` | `PathGuard`, `AuditLog`, `ValidationAgent` |
+| `approval_agent.py` | `AuthProvider`, `CLIAuthProvider`, `ApprovalAgent` |
+| `write_agent.py` | `create_proposal()`, `WriteAgent`, approved commit handling |
+
+Safety rules:
+
+- No auto-approval path exists.
+- `WriteAgent` commits only proposals with status `approved_for_commit`.
+- All Layer 7 actions append to `memory/logs/audit.jsonl`.
+- Path traversal is blocked by `PathGuard`.
+- Suspicious content is flagged for human review, not silently accepted.
+- `vault/core/` is not written by Layer 7.
+- Layer 7 stable modules are marked: `LAYER 7 STABLE - DO NOT MODIFY WITHOUT EXPLICIT INSTRUCTION`.
+
+`AuthProvider` is the plug-in point for approval mechanisms. The default is CLI yes/no approval; the ESP32-S3 provider is available on the hardware auth branch.
+
+---
+
+## ESP32-S3 Hardware Approval Device
+
+This branch adds a dedicated one-button USB approval token for Layer 7.
+
+Files:
+
+| Path | Purpose |
+|---|---|
+| `src/aeon_v1/hardware_auth_provider.py` | PC-side `ESP32S3AuthProvider(AuthProvider)` |
+| `firmware/esp32s3-auth-device/` | PlatformIO firmware for ESP32-S3 native USB CDC |
+| `docs/auth_device.md` | Integration guide and protocol notes |
+
+Install the optional serial dependency:
+
+```bash
+pip install -e ".[hardware]"
+```
+
+Use it with `ApprovalAgent`:
+
+```python
+from aeon_v1 import ApprovalAgent, Config, ESP32S3AuthProvider
+
+agent = ApprovalAgent(
+    Config(),
+    auth_provider=ESP32S3AuthProvider(port="COM5"),  # omit port for auto-discovery
+)
+agent.process_queue()
+```
+
+Flash the firmware:
+
+```bash
+cd firmware/esp32s3-auth-device
+pio run -t upload
+pio device monitor
+```
+
+Hardware defaults:
+
+- `GPIO0` button to `GND`, using internal pull-up; many boards use the built-in BOOT button.
+- `GPIO48` optional status LED.
+- Native USB CDC serial at `115200`.
+
+Protocol shape:
+
+```json
+{"type":"approval_request","id":"proposal-trace-id","summary":"semantic memory write","expires_ms":30000}
+```
+
+```json
+{"type":"approval","id":"proposal-trace-id","approved":true,"method":"button_hold","held_ms":1007}
+```
+
+The firmware ignores button presses unless a request is armed, binds approval to the exact proposal id, requires a one-second hold, and expires requests automatically.
+
+---
+
+## Manifest Agent
+
+`ManifestAgent` keeps `docs/tools_manifest.md` honest.
+
+It can:
+
+- Parse manifest tool headings.
+- Scan Python imports and dependency declarations.
+- Report drift between documented tools and code dependencies.
+- Propose tool additions through the full Layer 7 pipeline.
+- Store approved tool additions in `memory/tool_additions/`.
+
+The agent can propose changes, but cannot commit them directly. Governed additions still require validation, approval, and `WriteAgent` commit.
+
+---
+
+## Obsidian Vault
+
+Open `vault/` as an Obsidian vault for graph view, backlinks, and human-readable memory inspection.
+
+Every Markdown note uses frontmatter and stable wikilinks. IDs are stable; titles are human-readable. Filenames use IDs, and links use `[[subdir/id|title]]` so notes remain readable and resolvable.
+
+Obsidian is optional. The vault is plain Markdown.
 
 ---
 
 ## Project Structure
 
-```
+```text
 aeon-v1/
-  src/aeon_v1/      # Python package
-    config.py         # Paths and tunable parameters
-    memory_store.py   # Read/write memories (JSON + Markdown)
-    ingest.py         # Promotion logic: raw -> episodic -> semantic
-    reflect.py        # Reflection engine (Layer 2) — triggers task creation
-    tasks.py          # Task storage layer (Layer 3)
-    decision.py       # Decision engine — select_next_task() (Layer 3)
-    simulate.py       # Action simulation — simulate_action() (Layer 3, no execution)
-    llm.py            # Optional LLM adapter (Layer 4) — anthropic not required
-    search.py         # Keyword search (vector-ready interface)
-    linker.py         # Automatic Obsidian wikilink generation
-    exceptions.py     # CoreMemoryProtectedError
-  scripts/            # CLI entry points
-    ingest_text.py    # Ingest text from CLI / file / stdin
-    run_reflection.py # Trigger a reflection pass
-    search_memory.py  # Search across all memory layers
-    manage_tasks.py   # Layer 3: tasks | decide | simulate | loop
-  tests/              # pytest suite (105 tests across Layers 1–4)
-  vault/              # Human-readable Markdown notes (open as Obsidian vault)
-  memory/             # Structured JSON memory store + schemas
-  docs/               # Architecture and design documentation
+  src/aeon_v1/
+    agent.py                  Layer 6 agent node lifecycle
+    approval_agent.py         Layer 7 human approval gate
+    builtin_tools.py          Built-in tool definitions
+    config.py                 Paths, limits, LLM/env configuration
+    decision.py               Task selection engine
+    evaluate.py               Simulation evaluation
+    hardware_auth_provider.py ESP32-S3 AuthProvider implementation
+    ingest.py                 Raw -> episodic -> semantic promotion
+    linker.py                 Obsidian wikilink generation
+    llm.py                    Optional LLM adapter and tool-calling loop
+    manifest_agent.py         Tools manifest drift and governed additions
+    memory_index_agent.py     query_memory handler for LLM tool calls
+    memory_store.py           JSON + Markdown memory storage
+    orchestrator.py           Agent pool coordination
+    reflect.py                Reflection engine
+    schemas.py                Layer 7 schemas and validators
+    search.py                 Keyword search, vector-ready interface
+    security.py               PathGuard, AuditLog, ValidationAgent
+    simulate.py               Action simulation and tool-call matching
+    tasks.py                  Task storage and deduplication
+    time_utils.py             UTC storage and local display helpers
+    tool_calls.py             Tool-call record storage
+    tools.py                  Tool registry
+    write_agent.py            Governed write commit stage
+  scripts/
+    ingest_text.py
+    manage_tasks.py
+    run_reflection.py
+    search_memory.py
+  firmware/
+    esp32s3-auth-device/
+  docs/
+  memory/
+  vault/
+  tests/
 ```
 
 ---
 
-## Next Steps
+## Safety Guarantees
 
-See `docs/` for:
-- `architecture.md` — system design and data flow
-- `memory_model.md` — memory layer specification
-- `recursive_learning_loop.md` — how ingestion, promotion, and reflection connect
+Aeon-V1 is intentionally conservative:
+
+- Raw memories are append-only.
+- Reflections do not write core memory.
+- Simulations do not execute actions.
+- Tool definitions do not call tools.
+- Tool-call records are pending review records.
+- Agent nodes do not call shell, subprocess, network, `exec`, or `eval` primitives.
+- Layer 7 requires validation and human approval before agent-initiated writes commit.
+- The hardware auth device is only a physical approval signal; it cannot commit memory by itself.
+
+Humans remain in the loop at the points where state changes matter.
+
+---
+
+## More Documentation
+
+- `docs/architecture.md` - system layout and data flow
+- `docs/memory_model.md` - memory layer specification
+- `docs/recursive_learning_loop.md` - ingestion, reflection, task, and simulation cycle
+- `docs/INTEGRATION_STATUS.md` - implementation status and planned integrations
+- `docs/tools_manifest.md` - tools, dependencies, hardware, and planned additions
+- `docs/auth_device.md` - ESP32-S3 approval-token details
