@@ -181,6 +181,8 @@ def evaluate_simulation(
     Returns:
         {"evaluation": evaluation_record, "episodic": episodic_memory_record}
     """
+    from .write_guard import assert_write_authorized
+    assert_write_authorized("evaluate_simulation")
     if config is None:
         config = Config()
 

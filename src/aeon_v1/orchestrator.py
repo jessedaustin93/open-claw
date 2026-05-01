@@ -20,6 +20,7 @@ from typing import Dict, List, Optional
 from .agent import AGENT_ROLES, AgentNode
 from .bus import get_bus
 from .config import Config
+from .data_write_agent import DataWriteAgent
 from .memory_store import _generate_id
 from .schemas import make_agent_message
 from .simulate import SimulationStore
@@ -37,6 +38,7 @@ class Orchestrator:
     def __init__(self, config: Optional[Config] = None) -> None:
         self.config = config or Config()
         self._pool: Dict[str, AgentNode] = {}   # id → AgentNode (live pool only)
+        self._write_agent = DataWriteAgent(self.config)  # sole authorized writer
         self._ensure_dirs()
         self._load_pool()
 

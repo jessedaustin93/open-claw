@@ -17,13 +17,14 @@ from typing import Any, Dict, List, Optional
 
 from .bus import get_bus
 from .config import Config
-from .decision import DecisionStore, select_next_task
-from .evaluate import EvaluationStore, evaluate_simulation
+from .decision import DecisionStore
+from .evaluate import EvaluationStore
 from .memory_store import _generate_id, _wikilink
 from .schemas import make_agent_message
-from .simulate import SimulationStore, simulate_action
+from .simulate import SimulationStore
 from .tasks import TaskStore
 from .time_utils import local_date_time_string, utc_now_iso
+from .write_guard import agent_run_context
 
 # Allowed agent roles — enforced at spawn time.
 AGENT_ROLES = {
@@ -96,7 +97,8 @@ class AgentNode:
         self.run_count += 1
 
         try:
-            result = self._dispatch(**kwargs)
+            with agent_run_context(self.id, self.role):
+                result = self._dispatch(**kwargs)
         except Exception as exc:
             result = {"error": str(exc), "role": self.role}
 
@@ -147,17 +149,42 @@ class AgentNode:
     # ---------------------------------------------------------------- role handlers
 
     def _run_executor(self, task: Optional[Dict] = None, **_: Any) -> Dict:
-        """Select the best pending task (or use the provided one), simulate, and return."""
-        task_store = TaskStore(self.config)
-        dec_store = DecisionStore(self.config)
+        """Select the best pending task (or use the provided one), simulate, and return.
+
+        Task selection and simulation are both delegated to DataWriteAgent via
+        the bus — the executor performs no direct writes.
+        """
+        now = utc_now_iso()
 
         if task is None:
-            decision_result = select_next_task(self.config)
+            decision_result = get_bus().request(
+                "data.write.select_task",
+                make_agent_message(
+                    agent_id=self.id,
+                    action="write",
+                    target="data_write_agent",
+                    payload={},
+                    status="pending",
+                    timestamp=now,
+                    requires_approval=False,
+                ),
+            ) or {}
             if decision_result.get("task") is None:
                 return {"role": "executor", "outcome": "no_pending_tasks"}
             task = decision_result["task"]
 
-        sim_result = simulate_action(task, self.config)
+        sim_result = get_bus().request(
+            "data.write.simulate",
+            make_agent_message(
+                agent_id=self.id,
+                action="write",
+                target="data_write_agent",
+                payload={"task": task},
+                status="pending",
+                timestamp=now,
+                requires_approval=False,
+            ),
+        ) or {}
         return {
             "role":       "executor",
             "task_id":    task["id"],
@@ -166,9 +193,19 @@ class AgentNode:
         }
 
     def _run_thinker(self, **_: Any) -> Dict:
-        """Run a reflection pass and return a summary."""
-        from .reflect import reflect  # local import avoids circular dep at module load
-        result = reflect(self.config)
+        """Request a reflection pass from DataWriteAgent and return a summary."""
+        result = get_bus().request(
+            "data.write.reflect",
+            make_agent_message(
+                agent_id=self.id,
+                action="write",
+                target="data_write_agent",
+                payload={},
+                status="pending",
+                timestamp=utc_now_iso(),
+                requires_approval=False,
+            ),
+        ) or {}
         ref = result.get("reflection")
         return {
             "role":          "thinker",
@@ -178,7 +215,7 @@ class AgentNode:
         }
 
     def _run_monitor(self, **_: Any) -> Dict:
-        """Check memory counts; trigger reflection if interval is due."""
+        """Check memory counts; trigger a reflection via DataWriteAgent if interval is due."""
         from .memory_store import MemoryStore
         store = MemoryStore(self.config)
         ep_count  = len(store.list_memories("episodic"))
@@ -187,8 +224,18 @@ class AgentNode:
 
         triggered = False
         if total > 0 and total % self.config.reflection_interval == 0:
-            from .reflect import reflect
-            reflect(self.config)
+            get_bus().request(
+                "data.write.reflect",
+                make_agent_message(
+                    agent_id=self.id,
+                    action="write",
+                    target="data_write_agent",
+                    payload={},
+                    status="pending",
+                    timestamp=utc_now_iso(),
+                    requires_approval=False,
+                ),
+            )
             triggered = True
 
         return {
@@ -199,14 +246,13 @@ class AgentNode:
         }
 
     def _run_evaluator(self, simulation_id: Optional[str] = None, result_text: str = "", **_: Any) -> Dict:
-        """Evaluate a simulation against an observed result string."""
+        """Select the oldest unreviewed simulation and delegate evaluation to DataWriteAgent."""
         sim_store = SimulationStore(self.config)
         sims = sim_store.list_simulations()
 
         if simulation_id:
             target = next((s for s in sims if s["id"] == simulation_id), None)
         else:
-            # Evaluate the most recent unevaluated simulation.
             target = next(
                 (s for s in reversed(sims) if s.get("feedback") == "unknown"),
                 None,
@@ -218,7 +264,18 @@ class AgentNode:
         if not result_text:
             result_text = target.get("expected_outcome", "")
 
-        evaluation = evaluate_simulation(target, result_text, self.config)
+        evaluation = get_bus().request(
+            "data.write.evaluate",
+            make_agent_message(
+                agent_id=self.id,
+                action="write",
+                target="data_write_agent",
+                payload={"simulation": target, "result_text": result_text},
+                status="pending",
+                timestamp=utc_now_iso(),
+                requires_approval=False,
+            ),
+        ) or {}
         return {
             "role":          "evaluator",
             "simulation_id": target["id"],

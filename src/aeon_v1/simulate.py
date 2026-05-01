@@ -155,6 +155,8 @@ def simulate_action(task: Dict, config: Optional[Config] = None) -> Dict:
     Returns:
         {"simulation": simulation_record}
     """
+    from .write_guard import assert_write_authorized
+    assert_write_authorized("simulate_action")
     if config is None:
         config = Config()
 
