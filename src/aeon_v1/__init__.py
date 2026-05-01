@@ -1,5 +1,6 @@
 from .agent import AGENT_ROLES, AgentNode
 from .approval_agent import ApprovalAgent, AuthProvider, CLIAuthProvider
+from .hardware_auth_provider import ESP32S3AuthProvider, HardwareAuthError
 from .manifest_agent import DriftReport, ManifestAgent, ToolAdditionStore
 from .memory_index_agent import MemoryIndexAgent
 from .builtin_tools import BUILTIN_TOOLS, COMMAND_PREVIEW, FILE_READ, FILE_WRITE, register_builtin_tools
@@ -40,9 +41,11 @@ __all__ = [
     "CoreMemoryProtectedError",
     "DecisionStore",
     "DriftReport",
+    "ESP32S3AuthProvider",
     "EvaluationStore",
     "FILE_READ",
     "FILE_WRITE",
+    "HardwareAuthError",
     "ManifestAgent",
     "MemoryIndexAgent",
     "MemoryStore",
