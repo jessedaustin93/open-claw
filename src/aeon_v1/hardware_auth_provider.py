@@ -28,13 +28,13 @@ class ESP32S3AuthProvider(AuthProvider):
     Args:
         port: Serial port such as COM5, /dev/ttyACM0, or /dev/cu.usbmodem101.
               If omitted, the provider scans serial ports for a device that
-              answers with device == "open-claw-auth".
+              answers with device == "aeon-v1-auth".
         baudrate: USB CDC baudrate. The firmware accepts 115200 by convention.
         approval_timeout: Seconds to wait for the operator to hold the button.
         serial_timeout: Per-read timeout in seconds.
     """
 
-    DEVICE_NAME = "open-claw-auth"
+    DEVICE_NAME = "aeon-v1-auth"
 
     def __init__(
         self,
