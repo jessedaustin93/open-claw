@@ -18,6 +18,7 @@ import json
 from typing import Dict, List, Optional
 
 from .agent import AGENT_ROLES, AgentNode
+from .approval_agent import AuthProvider
 from .bus import get_bus
 from .config import Config
 from .data_write_agent import DataWriteAgent
@@ -35,10 +36,14 @@ class Orchestrator:
         config: Optional Config. Defaults to Config().
     """
 
-    def __init__(self, config: Optional[Config] = None) -> None:
+    def __init__(
+        self,
+        config: Optional[Config] = None,
+        auth_provider: Optional[AuthProvider] = None,
+    ) -> None:
         self.config = config or Config()
         self._pool: Dict[str, AgentNode] = {}   # id → AgentNode (live pool only)
-        self._write_agent = DataWriteAgent(self.config)  # sole authorized writer
+        self._write_agent = DataWriteAgent(self.config, auth_provider=auth_provider)
         self._ensure_dirs()
         self._load_pool()
 
