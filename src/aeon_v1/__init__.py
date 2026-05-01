@@ -3,6 +3,7 @@ from .approval_agent import ApprovalAgent, AuthProvider, CLIAuthProvider
 from .bus import MessageBus, MessageBusError, get_bus
 from .data_write_agent import DataWriteAgent
 from .write_guard import WriteAuthorizationError, agent_run_context, is_write_authorized
+from .hardware_auth_provider import ESP32S3AuthProvider, HardwareAuthError
 from .manifest_agent import DriftReport, ManifestAgent, ToolAdditionStore
 from .memory_index_agent import MemoryIndexAgent
 from .builtin_tools import BUILTIN_TOOLS, COMMAND_PREVIEW, FILE_READ, FILE_WRITE, register_builtin_tools
@@ -47,9 +48,11 @@ __all__ = [
     "CoreMemoryProtectedError",
     "DecisionStore",
     "DriftReport",
+    "ESP32S3AuthProvider",
     "EvaluationStore",
     "FILE_READ",
     "FILE_WRITE",
+    "HardwareAuthError",
     "ManifestAgent",
     "MemoryIndexAgent",
     "MemoryStore",
