@@ -8,7 +8,7 @@
 
 namespace {
 
-constexpr const char *DEVICE_NAME = "open-claw-auth";
+constexpr const char *DEVICE_NAME = "aeon-v1-auth";
 constexpr const char *FIRMWARE_VERSION = "1.0.0";
 
 // Most ESP32-S3 dev boards expose GPIO0 as the BOOT button, active-low.
