@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import cmd
 import json
+import re
 import textwrap
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -21,7 +22,7 @@ from typing import Dict, Iterable, List, Optional
 from .config import Config
 from .ingest import ingest
 from .linker import link_memories
-from .llm import generate_text, generate_with_memory
+from .llm import generate_chat, generate_text, generate_with_memory
 from .memory_index_agent import MemoryIndexAgent
 from .orchestrator import Orchestrator
 from .reflect import reflect
@@ -34,14 +35,16 @@ Aeon-V1 Terminal
 Local memory online. Type naturally, or use /help for commands.
 """.strip()
 
-SYSTEM_PROMPT = """You are Aeon-V1 speaking through a local terminal interface.
+SYSTEM_PROMPT = """You are Aeon, an AI built by Jesse. You speak through a local terminal.
 
-Voice and behavior:
-- Be warm, direct, and useful.
-- Answer like a normal chat AI, but ground yourself in the user's local Aeon memory when relevant.
-- Be honest when memory is thin or uncertain.
-- Do not claim actions were executed. Aeon simulations and Layer 7 proposals are governed separately.
-- If the user asks for something that changes important state, describe the safe next step and keep human approval in the loop.
+Voice rules — follow these strictly:
+- Talk like a person, not a document. Short sentences, natural tone.
+- Keep replies to 1-3 sentences unless Jesse explicitly asks for more detail.
+- No markdown: no headers (##), no bullet lists, no bold (**text**), no dashes as list items.
+- Never pad with preamble like "Great question!" or "Here's what I'll do:".
+- If you remember something relevant, weave it in naturally — don't quote memory records.
+- Be honest when you don't know something. Don't make things up to fill space.
+- Do not claim actions were executed. If something needs approval, say so in one sentence.
 """
 
 
@@ -75,8 +78,11 @@ class TerminalChatApp(cmd.Cmd):
         super().__init__()
         self.config = config
         self.options = options
+        # Chat conversations are episodic by nature — lower the threshold so every
+        # meaningful exchange gets promoted, not just keyword-heavy notes.
+        self.config.importance_threshold = 0.2
         self.index_agent = MemoryIndexAgent(config)
-        self.turns: List[ChatTurn] = []
+        self.turns: List[ChatTurn] = _load_recent_turns(options.transcript_path, limit=6)
         self.turn_count = 0
         self.config.ensure_dirs()
 
@@ -86,6 +92,7 @@ class TerminalChatApp(cmd.Cmd):
         text = line.strip()
         if not text:
             return
+        print("aeon is thinking...")
         turn = self.handle_chat(text)
         print_wrapped(turn.assistant)
 
@@ -122,6 +129,8 @@ class TerminalChatApp(cmd.Cmd):
             "llm_enabled": self.config.llm_enabled,
             "llm_provider": self.config.llm_provider,
             "llm_model": self.config.llm_model,
+            "llm_chat_model": self.config.llm_chat_model,
+            "llm_deep_model": self.config.llm_deep_model,
             "llm_tool_calling": self.config.llm_tool_calling,
             "auto_link": self.options.auto_link,
             "auto_tick": self.options.auto_tick,
@@ -280,20 +289,45 @@ def build_response(
     config: Config,
     index_agent: MemoryIndexAgent,
 ) -> str:
-    prompt = build_chat_prompt(user_text, memories, history)
+    core = load_core_context(config)
     if config.llm_tool_calling:
+        prompt = build_chat_prompt(user_text, memories, history, core=core)
         llm_text = generate_with_memory(prompt, index_agent=index_agent, config=config)
     else:
-        llm_text = generate_text(prompt, config=config)
+        llm_text = generate_chat(build_chat_messages(user_text, memories, history, core=core), config=config)
     if llm_text:
-        return llm_text.strip()
-    return fallback_response(user_text, memories)
+        return strip_markdown(llm_text.strip())
+    return fallback_response(user_text, memories, llm_enabled=config.llm_enabled)
 
 
-def build_chat_prompt(user_text: str, memories: List[Dict], history: Iterable[ChatTurn]) -> str:
+def strip_markdown(text: str) -> str:
+    """Remove markdown formatting so responses read as plain conversational text."""
+    lines = []
+    for line in text.splitlines():
+        # Drop header lines entirely (## Heading → drop)
+        if re.match(r"^#{1,6}\s+", line):
+            line = re.sub(r"^#{1,6}\s+", "", line)
+        # Strip leading list markers (- item, * item, 1. item)
+        line = re.sub(r"^\s*[-*]\s+", "", line)
+        line = re.sub(r"^\s*\d+\.\s+", "", line)
+        # Strip bold/italic markers
+        line = re.sub(r"\*{1,3}(.+?)\*{1,3}", r"\1", line)
+        line = re.sub(r"_{1,2}(.+?)_{1,2}", r"\1", line)
+        # Strip inline code
+        line = re.sub(r"`(.+?)`", r"\1", line)
+        lines.append(line)
+    # Collapse runs of blank lines to single blank
+    result = re.sub(r"\n{3,}", "\n\n", "\n".join(lines))
+    return result.strip()
+
+
+def build_chat_prompt(user_text: str, memories: List[Dict], history: Iterable[ChatTurn], core: str = "") -> str:
     memory_block = format_memories(memories)
     history_block = format_history(history)
     return f"""{SYSTEM_PROMPT}
+
+Core identity and rules:
+{core or '- None loaded.'}
 
 Recent conversation:
 {history_block or '- No prior turns in this session.'}
@@ -304,12 +338,58 @@ Relevant local memory:
 User message:
 {user_text}
 
-Reply as Aeon. Keep the answer useful and conversational. If you use memory, make it feel natural rather than dumping records."""
+Reply as Aeon. 1-3 sentences max unless Jesse asks for more. No markdown, no headers, no bullet points. Talk like a person."""
+
+
+def build_chat_messages(user_text: str, memories: List[Dict], history: Iterable[ChatTurn], core: str = "") -> List[Dict]:
+    context_parts: List[str] = []
+    if core:
+        context_parts.append(f"Core identity and rules:\n{core}")
+    history_block = format_history(history)
+    memory_block = format_memories(memories)
+    if history_block:
+        context_parts.append(f"Recent conversation:\n{history_block}")
+    if memory_block:
+        context_parts.append(f"Relevant local memory:\n{memory_block}")
+
+    user_content = user_text
+    if context_parts:
+        user_content = "\n\n".join(context_parts) + f"\n\nUser message:\n{user_text}"
+
+    return [
+        {
+            "role": "system",
+            "content": (
+                "You are Aeon, an AI built by Jesse. Talk like a person — short, warm, direct. "
+                "No markdown, no headers, no bullet lists. Keep replies to 1-3 sentences unless asked for more. "
+                "Do not claim actions were executed."
+            ),
+        },
+        {"role": "user", "content": user_content},
+    ]
 
 
 def retrieve_context(query: str, config: Config, limit: int) -> List[Dict]:
     results = search(query, memory_types=["episodic", "semantic", "reflections"], config=config)
     return results[:limit]
+
+
+def load_core_context(config: Config) -> str:
+    """Load all vault/core/*.md files into a single context block."""
+    core_dir = config.vault_path / "core"
+    if not core_dir.exists():
+        return ""
+    lines: List[str] = []
+    for f in sorted(core_dir.glob("*.md")):
+        if f.name.startswith(".") or f.name == "PROTECTED.md":
+            continue
+        try:
+            content = f.read_text(encoding="utf-8").strip()
+            if content:
+                lines.append(content)
+        except Exception:
+            pass
+    return "\n\n".join(lines)
 
 
 def format_memories(results: List[Dict]) -> str:
@@ -347,7 +427,13 @@ def compact(text: str, limit: int) -> str:
     return shortened + "..."
 
 
-def fallback_response(user_text: str, memories: List[Dict]) -> str:
+def fallback_response(user_text: str, memories: List[Dict], llm_enabled: bool = False) -> str:
+    reason = (
+        "LM Studio did not return a usable answer before the local timeout, "
+        "so I am giving you the local-memory view instead."
+        if llm_enabled else
+        "LLM mode is off, so I am giving you the local-memory view instead of a generated answer."
+    )
     if memories:
         memory_lines = "\n".join(
             f"- {memory_preview(result.get('memory', {}))}" for result in memories[:3]
@@ -355,11 +441,11 @@ def fallback_response(user_text: str, memories: List[Dict]) -> str:
         return (
             f"{local_fallback_prefix()} I stored that and found a few nearby memories:\n"
             f"{memory_lines}\n\n"
-            "LLM mode is off or unavailable, so I am giving you the local-memory view instead of a generated answer."
+            f"{reason}"
         )
     return (
         f"{local_fallback_prefix()} I stored that. I do not have a close memory match yet, "
-        "and LLM mode is off or unavailable, so there is no generated answer this turn."
+        f"and {reason}"
     )
 
 
@@ -375,6 +461,27 @@ def print_wrapped(text: str) -> None:
             print(textwrap.fill(paragraph, width=88, replace_whitespace=False))
 
 
+def _load_recent_turns(transcript_path: Optional[Path], limit: int = 6) -> List[ChatTurn]:
+    """Read the last `limit` turns from the transcript file to restore conversation history."""
+    if transcript_path is None or not transcript_path.exists():
+        return []
+    try:
+        lines = transcript_path.read_text(encoding="utf-8").splitlines()
+        recent = [l for l in lines if l.strip()][-limit:]
+        turns = []
+        for line in recent:
+            entry = json.loads(line)
+            turns.append(ChatTurn(
+                user=entry.get("user", ""),
+                assistant=entry.get("assistant", ""),
+                memory_ids=entry.get("memory_ids", []),
+                llm_used=entry.get("llm_used", False),
+            ))
+        return turns
+    except Exception:
+        return []
+
+
 def parse_args(argv: Optional[List[str]] = None) -> ChatOptions:
     parser = argparse.ArgumentParser(description="Open the Aeon-V1 terminal chat interface.")
     parser.add_argument("--base-path", default=".", help="Repo root containing memory/ and vault/.")
@@ -385,8 +492,8 @@ def parse_args(argv: Optional[List[str]] = None) -> ChatOptions:
     parser.add_argument(
         "--reflect-every",
         type=int,
-        default=0,
-        help="Run reflect() every N chat turns. Default 0 disables automatic reflection.",
+        default=10,
+        help="Run reflect() every N chat turns. Default 10.",
     )
     parser.add_argument("--memory-limit", type=int, default=5, help="Relevant memories to include per turn.")
     parser.add_argument(

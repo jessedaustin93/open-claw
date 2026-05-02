@@ -18,6 +18,14 @@ AEON_V1_LLM_MODEL
   Examples: google/gemma-4-e4b (LM Studio), claude-sonnet-4-6 (Anthropic)
   Default: claude-sonnet-4-6
 
+AEON_V1_LLM_CHAT_MODEL
+  Model name used for interactive chat responses. Use the fastest useful local instruct model.
+  Default: AEON_V1_LLM_MODEL
+
+AEON_V1_LLM_DEEP_MODEL
+  Model name reserved for deeper background reasoning work.
+  Default: AEON_V1_LLM_MODEL
+
 AEON_V1_LLM_BASE_URL
   Base URL for OpenAI-compatible local servers (used by lmstudio provider).
   Default: http://localhost:1234/v1
@@ -29,6 +37,10 @@ AEON_V1_LLM_TIMEOUT
 AEON_V1_LLM_MAX_TOKENS
   Maximum tokens the LLM will generate per call. Lower this for faster responses on small local models.
   Default: 1200
+
+AEON_V1_LLM_REASONING_EFFORT
+  Reasoning effort passed to LM Studio for local reasoning models. Use low for faster local chat.
+  Default: low
 
 AEON_V1_LLM_TOOL_CALLING
   Enable tool-calling path for reflect/simulate. When True, the LLM queries the MemoryIndexAgent

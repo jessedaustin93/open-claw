@@ -14,6 +14,7 @@ env/
 
 # Testing
 .pytest_cache/
+.pytest-tmp/
 .coverage
 htmlcov/
 
@@ -24,16 +25,28 @@ htmlcov/
 *.swp
 *.swo
 Thumbs.db
+.env
 
-# Open-Claw runtime data (keep schemas; ignore generated memory files)
+# Local tooling / work dirs
+.claude/
+_work/
+
+# Aeon-V1 runtime data (keep schemas; ignore generated memory files)
 memory/raw/*.json
 memory/episodic/*.json
 memory/semantic/*.json
 memory/reflections/*.json
+memory/chat/
+memory/decisions/
+memory/simulations/
+memory/tasks/
 vault/raw/*.md
 vault/episodic/*.md
 vault/semantic/*.md
 vault/reflections/*.md
+vault/decisions/
+vault/simulations/
+vault/tasks/
 
 # But keep example seed data
 !memory/raw/example_*.json

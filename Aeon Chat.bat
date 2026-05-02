@@ -3,11 +3,15 @@ setlocal
 cd /d "%~dp0"
 title Aeon-V1 Terminal
 
-where py >nul 2>nul
-if %ERRORLEVEL%==0 (
-  py -3 scripts\aeon_chat.py --base-path "%~dp0"
+if exist "%~dp0.venv\Scripts\python.exe" (
+  "%~dp0.venv\Scripts\python.exe" "%CD%\scripts\aeon_chat.py" --base-path "%CD%"
 ) else (
-  python scripts\aeon_chat.py --base-path "%~dp0"
+  where py >nul 2>nul
+  if %ERRORLEVEL%==0 (
+  py -3 "%CD%\scripts\aeon_chat.py" --base-path "%CD%"
+) else (
+  python "%CD%\scripts\aeon_chat.py" --base-path "%CD%"
+  )
 )
 
 if errorlevel 1 (

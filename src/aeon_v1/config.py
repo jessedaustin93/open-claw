@@ -1,5 +1,6 @@
 from pathlib import Path
 import os
+import sys
 
 
 def _load_env(path: Path) -> None:
@@ -7,7 +8,8 @@ def _load_env(path: Path) -> None:
 
     Skipped during pytest runs so tests control their own environment via monkeypatch.
     """
-    if os.environ.get("PYTEST_CURRENT_TEST"):
+    argv_text = " ".join(sys.argv).lower()
+    if os.environ.get("PYTEST_CURRENT_TEST") or "pytest" in argv_text:
         return
     if not path.exists():
         return
@@ -62,9 +64,14 @@ class Config:
         self.llm_enabled: bool = os.environ.get("AEON_V1_LLM", "0").strip() == "1"
         self.llm_provider: str = os.environ.get("AEON_V1_LLM_PROVIDER", "anthropic")
         self.llm_model: str = os.environ.get("AEON_V1_LLM_MODEL", "claude-sonnet-4-6")
+        self.llm_chat_model: str = os.environ.get("AEON_V1_LLM_CHAT_MODEL", self.llm_model)
+        self.llm_deep_model: str = os.environ.get("AEON_V1_LLM_DEEP_MODEL", self.llm_model)
         self.llm_temperature: float = 0.2
         self.llm_max_tokens: int = int(os.environ.get("AEON_V1_LLM_MAX_TOKENS", "1200"))
         self.llm_timeout_seconds: int = int(os.environ.get("AEON_V1_LLM_TIMEOUT", "60"))
+        self.llm_chat_timeout_seconds: int = int(os.environ.get("AEON_V1_LLM_CHAT_TIMEOUT", "30"))
+        self.llm_max_attempts: int = int(os.environ.get("AEON_V1_LLM_MAX_ATTEMPTS", "1"))
+        self.llm_reasoning_effort: str = os.environ.get("AEON_V1_LLM_REASONING_EFFORT", "low")
         # LM Studio / OpenAI-compatible local server
         self.llm_base_url: str = os.environ.get("AEON_V1_LLM_BASE_URL", "http://localhost:1234/v1")
         # When True, reflect/simulate use tool calling so the LLM queries the

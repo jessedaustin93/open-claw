@@ -12,6 +12,7 @@ Environment variables:
     AEON_V1_LLM_PROVIDER=lmstudio        — select provider (default: anthropic)
     AEON_V1_LLM_MODEL=google/gemma-4-e4b — model name
     AEON_V1_LLM_BASE_URL=http://...      — LM Studio base URL (default: http://localhost:1234/v1)
+    AEON_V1_LLM_REASONING_EFFORT=low     — LM Studio reasoning effort for reasoning models
     ANTHROPIC_API_KEY=<key>              — required only for anthropic provider
 """
 import json
@@ -79,7 +80,21 @@ def generate_text(prompt: str, config: Optional[Config] = None) -> Optional[str]
     if config.llm_provider == "anthropic":
         return _call_anthropic(prompt, config)
     if config.llm_provider == "lmstudio":
-        return _call_lmstudio(prompt, config)
+        return _call_lmstudio_messages([{"role": "user", "content": prompt}], config)
+    return None
+
+
+def generate_chat(messages: List[Dict], config: Optional[Config] = None) -> Optional[str]:
+    """Call the configured chat LLM with explicit role-separated messages."""
+    if config is None:
+        config = Config()
+    if not config.llm_enabled:
+        return None
+    if config.llm_provider == "lmstudio":
+        return _call_lmstudio_messages(messages, config, model=config.llm_chat_model)
+    if config.llm_provider == "anthropic":
+        prompt = "\n\n".join(f"{m.get('role', 'user')}: {m.get('content', '')}" for m in messages)
+        return _call_anthropic(prompt, config)
     return None
 
 
@@ -111,19 +126,27 @@ def _call_lmstudio(prompt: str, config: Config) -> Optional[str]:
 
     Retries up to _LM_STUDIO_MAX_ATTEMPTS times on failure, then returns None.
     """
-    url = f"{config.llm_base_url.rstrip('/')}/chat/completions"
-    payload = json.dumps({
-        "model": config.llm_model,
-        "messages": [{"role": "user", "content": prompt}],
-        "temperature": config.llm_temperature,
-        "max_tokens": config.llm_max_tokens,
-    }).encode("utf-8")
+    return _call_lmstudio_messages([{"role": "user", "content": prompt}], config)
 
+
+def _call_lmstudio_messages(messages: List[Dict], config: Config, model: Optional[str] = None) -> Optional[str]:
+    """Call LM Studio local server with OpenAI-compatible chat messages."""
+    url = f"{config.llm_base_url.rstrip('/')}/chat/completions"
     if not _lm_studio_semaphore.acquire(blocking=False):
         return None  # queue full — 10 requests already in flight
 
     try:
-        for attempt in range(1, _LM_STUDIO_MAX_ATTEMPTS + 1):
+        max_attempts = max(1, config.llm_max_attempts)
+        for attempt in range(1, max_attempts + 1):
+            payload_data = {
+                "model": model or config.llm_model,
+                "messages": messages,
+                "temperature": config.llm_temperature,
+                "max_tokens": min(config.llm_max_tokens * attempt, 1024),
+            }
+            if config.llm_reasoning_effort:
+                payload_data["reasoning_effort"] = config.llm_reasoning_effort
+            payload = json.dumps(payload_data).encode("utf-8")
             try:
                 req = urllib.request.Request(
                     url,
@@ -131,12 +154,16 @@ def _call_lmstudio(prompt: str, config: Config) -> Optional[str]:
                     headers={"Content-Type": "application/json"},
                     method="POST",
                 )
-                with urllib.request.urlopen(req, timeout=config.llm_timeout_seconds) as resp:
+                with urllib.request.urlopen(req, timeout=config.llm_chat_timeout_seconds) as resp:
                     data = json.loads(resp.read().decode("utf-8"))
-                    return data["choices"][0]["message"]["content"]
+                    message = data["choices"][0]["message"]
+                    content = (message.get("content") or "").strip()
+                    if content:
+                        return content
             except Exception:
-                if attempt == _LM_STUDIO_MAX_ATTEMPTS:
+                if attempt == max_attempts:
                     return None
+        return None
     finally:
         _lm_studio_semaphore.release()
 
@@ -194,14 +221,17 @@ def _call_lmstudio_with_tools(prompt: str, config: Config) -> Optional[str]:
 
     try:
         for _ in range(_LM_STUDIO_MAX_ATTEMPTS):
-            payload = json.dumps({
+            payload_data = {
                 "model":       config.llm_model,
                 "messages":    messages,
                 "tools":       [QUERY_MEMORY_TOOL],
                 "tool_choice": "auto",
                 "temperature": config.llm_temperature,
                 "max_tokens":  config.llm_max_tokens,
-            }).encode("utf-8")
+            }
+            if config.llm_reasoning_effort:
+                payload_data["reasoning_effort"] = config.llm_reasoning_effort
+            payload = json.dumps(payload_data).encode("utf-8")
             try:
                 req = urllib.request.Request(
                     url,
