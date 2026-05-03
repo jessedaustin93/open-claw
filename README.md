@@ -33,6 +33,9 @@ Aeon-V1 is not an autonomous executor. It is a governed memory and reasoning sub
 
 ## Quick Start
 
+For a fresh GitHub download, see `docs/setup_from_github.md` for the full
+install, LLM, LM Studio, Anthropic, and optional hardware checklist.
+
 ### Install
 
 ```bash
@@ -580,6 +583,7 @@ Humans remain in the loop at the points where state changes matter.
 ## More Documentation
 
 - `docs/architecture.md` - system layout and data flow
+- `docs/setup_from_github.md` - fresh clone setup checklist
 - `docs/memory_model.md` - memory layer specification
 - `docs/recursive_learning_loop.md` - ingestion, reflection, task, and simulation cycle
 - `docs/INTEGRATION_STATUS.md` - implementation status and planned integrations
