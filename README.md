@@ -25,6 +25,7 @@ Aeon-V1 is not an autonomous executor. It is a governed memory and reasoning sub
 | Layer 7 write governance | Implemented and locked | `schemas.py`, `security.py`, `approval_agent.py`, `write_agent.py` |
 | Manifest drift monitoring | Implemented | `manifest_agent.py` |
 | Optional LLM reasoning | Implemented, including LM Studio model roles | `llm.py`, `memory_index_agent.py` |
+| Obsidian vault integration | Implemented, optional/local | `vault/`, `linker.py`, `docs/obsidian.md` |
 | ESP32-S3 hardware approval token | Implemented | `hardware_auth_provider.py`, `firmware/esp32s3-auth-device/` |
 | Vector embeddings | Planned | `search.py` is vector-ready |
 | Real command execution | Out of scope | No execution path exists |
@@ -34,7 +35,7 @@ Aeon-V1 is not an autonomous executor. It is a governed memory and reasoning sub
 ## Quick Start
 
 For a fresh GitHub download, see `docs/setup_from_github.md` for the full
-install, LLM, LM Studio, Anthropic, and optional hardware checklist.
+install, LLM, LM Studio, Anthropic, Obsidian, and optional hardware checklist.
 
 ### Install
 
@@ -513,6 +514,14 @@ Every Markdown note uses frontmatter and stable wikilinks. IDs are stable; title
 
 Obsidian is optional. The vault is plain Markdown.
 
+To use it locally, install Obsidian, choose **Open folder as vault**, and select:
+
+```text
+aeon-v1/vault/
+```
+
+Do not commit `vault/.obsidian/`; it is local app/workspace state and is ignored by Git. See `docs/obsidian.md` for setup and operating details.
+
 ---
 
 ## Project Structure
@@ -584,6 +593,7 @@ Humans remain in the loop at the points where state changes matter.
 
 - `docs/architecture.md` - system layout and data flow
 - `docs/setup_from_github.md` - fresh clone setup checklist
+- `docs/obsidian.md` - optional local Obsidian vault workflow
 - `docs/memory_model.md` - memory layer specification
 - `docs/recursive_learning_loop.md` - ingestion, reflection, task, and simulation cycle
 - `docs/INTEGRATION_STATUS.md` - implementation status and planned integrations

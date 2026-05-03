@@ -156,7 +156,31 @@ $env:AEON_V1_LLM_PROVIDER="anthropic"
 $env:ANTHROPIC_API_KEY="your_key_here"
 ```
 
-## 8. Optional ESP32-S3 Approval Device
+## 8. Optional Obsidian Vault
+
+Install Obsidian locally from the official download page:
+
+```text
+https://obsidian.md/download
+```
+
+Windows users may also be able to install with:
+
+```powershell
+winget install Obsidian.Obsidian
+```
+
+Then open the repository's `vault/` directory as an Obsidian vault:
+
+```text
+aeon-v1/vault/
+```
+
+Start from `index.md`. Aeon-generated notes use YAML frontmatter and `[[wikilinks]]`, and `link_memories()` can refresh related-memory links.
+
+See `docs/obsidian.md` for the full local workflow.
+
+## 9. Optional ESP32-S3 Approval Device
 
 The repository includes firmware source for the hardware approval token:
 
@@ -180,7 +204,7 @@ pio device monitor
 
 See `docs/auth_device.md` for protocol details.
 
-## 9. What Is Ready Immediately
+## 10. What Is Ready Immediately
 
 - Python package source under `src/aeon_v1/`
 - CLI scripts under `scripts/`
@@ -191,12 +215,13 @@ See `docs/auth_device.md` for protocol details.
 - LM Studio template `.env.lmstudio.template`
 - ESP32-S3 firmware source
 
-## 10. What Must Stay Local
+## 11. What Must Stay Local
 
 - `.env`
 - API keys
 - exact local model selections
 - LM Studio server state
+- Obsidian app/workspace state in `vault/.obsidian/`
 - generated runtime memories and transcripts
 - flashed hardware state
 

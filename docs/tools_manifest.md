@@ -50,7 +50,7 @@ Each entry lists:
 ---
 
 ### pytest 7.4+
-- **Purpose:** Running the full test suite (509 tests across 14 test files as of Layer 7)
+- **Purpose:** Running the full test suite
 - **Importance:** Required (development)
 - **Link:** https://docs.pytest.org/
 - **Notes:** Only needed for development/CI — not a runtime dependency. Run `pytest tests/` from repo root.
@@ -83,11 +83,19 @@ Each entry lists:
 
 ---
 
-### Local LLM (future — Ollama / llama.cpp)
-- **Purpose:** Run LLM inference locally without an API key or internet connection
+### LM Studio
+- **Purpose:** Local OpenAI-compatible LLM server for chat, reflection, simulation, and tool-calling memory queries
+- **Importance:** Optional
+- **Link:** https://lmstudio.ai/
+- **Notes:** Implemented through the `lmstudio` provider in `llm.py`. Configure with `AEON_V1_LLM_PROVIDER=lmstudio` and model-role variables (`AEON_V1_LLM_CHAT_MODEL`, `AEON_V1_LLM_MODEL`, `AEON_V1_LLM_DEEP_MODEL`). Start from `.env.lmstudio.template`. Aeon caps outbound LM Studio concurrency at 10 in-flight requests and falls back safely when the local server or model is unavailable.
+
+---
+
+### Future Local LLM Providers (Ollama / llama.cpp)
+- **Purpose:** Additional local inference options without an API key or internet connection
 - **Importance:** Planned
 - **Link:** https://ollama.com/
-- **Notes:** The `generate_text()` function in `llm.py` is designed for a second provider branch. Adding local inference requires implementing `_call_local(prompt, config)` alongside the existing `_call_anthropic()`. No cloud dependency once wired.
+- **Notes:** LM Studio is the current implemented local provider. Additional providers should follow the same fail-safe pattern as `generate_text()` and return `None` on provider errors so rule-based fallback remains active.
 
 ---
 
@@ -105,7 +113,7 @@ Each entry lists:
 - **Purpose:** Human-readable view of the entire memory vault (`vault/`). All `.md` files are Obsidian-compatible with YAML frontmatter and `[[wikilinks]]`.
 - **Importance:** Optional (strongly recommended for operators)
 - **Link:** https://obsidian.md/
-- **Notes:** Open the `vault/` directory as an Obsidian vault. No plugins required. Graph view shows memory connections. Core vault (`vault/core/`) is human-gated — edit manually here, never by the system.
+- **Notes:** Install locally and open only the `vault/` directory as an Obsidian vault. No plugins required. Graph view shows memory connections after generated notes and `link_memories()` populate wikilinks. `vault/.obsidian/` is local app/workspace state and is ignored by Git. Core vault (`vault/core/`) is human-gated; edit manually here, never by the system.
 
 ---
 
@@ -254,4 +262,5 @@ Each entry lists:
 ---
 
 *Document created: 2026-04-30 — Initial version reflecting Layers 1–7.*
+*Updated: 2026-05-03 — Documented implemented LM Studio provider and local Obsidian workflow.*
 *Update policy: append or modify entries only; never delete without explicit instruction; note reason for each change.*

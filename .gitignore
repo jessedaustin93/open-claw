@@ -26,6 +26,7 @@ htmlcov/
 *.swo
 Thumbs.db
 .env
+vault/.obsidian/
 
 # Local tooling / work dirs
 .claude/
