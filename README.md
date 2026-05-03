@@ -24,7 +24,7 @@ Aeon-V1 is not an autonomous executor. It is a governed memory and reasoning sub
 | Agent nodes and orchestrator | Implemented | `agent.py`, `orchestrator.py` |
 | Layer 7 write governance | Implemented and locked | `schemas.py`, `security.py`, `approval_agent.py`, `write_agent.py` |
 | Manifest drift monitoring | Implemented | `manifest_agent.py` |
-| Optional LLM reasoning | Implemented | `llm.py`, `memory_index_agent.py` |
+| Optional LLM reasoning | Implemented, including LM Studio model roles | `llm.py`, `memory_index_agent.py` |
 | ESP32-S3 hardware approval token | Implemented | `hardware_auth_provider.py`, `firmware/esp32s3-auth-device/` |
 | Vector embeddings | Planned | `search.py` is vector-ready |
 | Real command execution | Out of scope | No execution path exists |
@@ -32,6 +32,9 @@ Aeon-V1 is not an autonomous executor. It is a governed memory and reasoning sub
 ---
 
 ## Quick Start
+
+For a fresh GitHub download, see `docs/setup_from_github.md` for the full
+install, LLM, LM Studio, Anthropic, and optional hardware checklist.
 
 ### Install
 
@@ -244,6 +247,76 @@ Simulation remains file-only. `simulate.py` does not import or call subprocess, 
 
 Aeon-V1 runs without an LLM. If enabled, LLM output enhances reflection, simulation, and chat responses while the file-based system remains the source of truth.
 
+LLM support is fail-safe: missing packages, unavailable local servers, API failures, empty model responses, or disabled config all fall back to rule-based behavior.
+
+### LM Studio Mode
+
+LM Studio is the recommended local model path. Aeon talks to LM Studio through its OpenAI-compatible HTTP server and does not require an extra Python package.
+
+Start from the template:
+
+```bash
+cp .env.lmstudio.template .env
+```
+
+PowerShell:
+
+```powershell
+Copy-Item .env.lmstudio.template .env
+```
+
+Then replace the placeholder model IDs in `.env` with the exact IDs shown in LM Studio.
+
+Aeon supports three LM Studio model roles:
+
+| Variable | Purpose |
+|---|---|
+| `AEON_V1_LLM_CHAT_MODEL` | Fast model for interactive chat responses |
+| `AEON_V1_LLM_MODEL` | General model for normal LLM reasoning calls |
+| `AEON_V1_LLM_DEEP_MODEL` | Deeper model for tool-calling reflection/simulation paths |
+
+You can point all three variables at the same model, or split them across fast/general/deep models. This makes it easy to swap any LM Studio model in later without changing code.
+
+LM Studio defaults:
+
+```env
+AEON_V1_LLM=1
+AEON_V1_LLM_PROVIDER=lmstudio
+AEON_V1_LLM_BASE_URL=http://localhost:1234/v1
+AEON_V1_LLM_CHAT_MODEL=your-fast-chat-model-id
+AEON_V1_LLM_MODEL=your-general-model-id
+AEON_V1_LLM_DEEP_MODEL=your-deep-reasoning-model-id
+```
+
+### Parallel LM Studio Calls
+
+The LM Studio adapter supports concurrent callers. Outbound LM Studio HTTP requests are guarded by a hard cap of 10 in-flight requests so parallel chat, reflection, simulation, and tool-calling paths can overlap without overwhelming the local server.
+
+The test suite includes a threaded fake LM Studio server that verifies:
+
+- parallel requests overlap at the HTTP layer,
+- more than 10 concurrent LM Studio calls are refused cleanly,
+- chat/general/deep model IDs are routed in the actual request payloads,
+- deep tool-calling falls back to a no-tools deep request if the model or server rejects tool payloads.
+
+The orchestrator itself is still synchronous. Parallel LLM behavior is available when multiple callers invoke the LM Studio adapter at the same time; it does not make Aeon an autonomous executor.
+
+### Tool Calling
+
+Set this to enable sparse prompt mode:
+
+```env
+AEON_V1_LLM_TOOL_CALLING=1
+```
+
+When tool calling is enabled, reflection and simulation use `MemoryIndexAgent` through the message bus. The model can call `query_memory` to retrieve bounded local context instead of receiving all memories inlined in the prompt.
+
+Not every LM Studio model handles OpenAI-style tool calling well. If the tool-calling request fails or returns no final content, Aeon retries the same deep model without tools and then falls back to rule-based behavior if needed.
+
+Reasoning models may spend part of their token budget in hidden or separate reasoning fields before producing final `content`. If a thinking model returns empty content, increase `AEON_V1_LLM_MAX_TOKENS` or use a non-thinking model for the affected role.
+
+### Anthropic Mode
+
 Enable Anthropic/Claude mode:
 
 ```bash
@@ -264,15 +337,16 @@ Useful environment variables:
 |---|---|
 | `AEON_V1_LLM` | Set to `1` to enable LLM calls |
 | `AEON_V1_LLM_PROVIDER` | Provider name; defaults to `anthropic` |
-| `AEON_V1_LLM_MODEL` | Model name; defaults from `Config` |
+| `AEON_V1_LLM_CHAT_MODEL` | Chat model name; defaults to `AEON_V1_LLM_MODEL` |
+| `AEON_V1_LLM_MODEL` | General model name; defaults from `Config` |
+| `AEON_V1_LLM_DEEP_MODEL` | Deep/tool-calling model name; defaults to `AEON_V1_LLM_MODEL` |
 | `AEON_V1_LLM_MAX_TOKENS` | Max response tokens |
 | `AEON_V1_LLM_TIMEOUT` | Request timeout seconds |
+| `AEON_V1_LLM_CHAT_TIMEOUT` | Chat request timeout seconds |
+| `AEON_V1_LLM_MAX_ATTEMPTS` | Retry count for LM Studio calls and tool-call rounds |
+| `AEON_V1_LLM_REASONING_EFFORT` | Reasoning effort value passed to LM Studio when supported |
 | `AEON_V1_LLM_BASE_URL` | Local/OpenAI-compatible server URL |
 | `AEON_V1_LLM_TOOL_CALLING` | Set to `1` to let the LLM query memory through `MemoryIndexAgent` |
-
-When tool-calling is enabled, `MemoryIndexAgent` services `query_memory` tool calls by searching local memory and returning bounded, formatted results. This keeps prompts sparse while still letting the model inspect relevant memory.
-
-LLM fallback is fail-safe: missing package, missing key, API failure, or disabled config all return to rule-based behavior.
 
 ---
 
@@ -445,6 +519,7 @@ Obsidian is optional. The vault is plain Markdown.
 
 ```text
 aeon-v1/
+  .env.lmstudio.template      Generic LM Studio environment template
   src/aeon_v1/
     agent.py                  Layer 6 agent node lifecycle
     approval_agent.py         Layer 7 human approval gate
@@ -508,6 +583,7 @@ Humans remain in the loop at the points where state changes matter.
 ## More Documentation
 
 - `docs/architecture.md` - system layout and data flow
+- `docs/setup_from_github.md` - fresh clone setup checklist
 - `docs/memory_model.md` - memory layer specification
 - `docs/recursive_learning_loop.md` - ingestion, reflection, task, and simulation cycle
 - `docs/INTEGRATION_STATUS.md` - implementation status and planned integrations
