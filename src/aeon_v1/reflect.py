@@ -296,7 +296,7 @@ def _generate_reflection(analysis: Dict, config: Optional[Config] = None) -> str
             if llm_sections:
                 llm_meta = {
                     "llm_used":     True,
-                    "llm_model":    config.llm_model,
+                    "llm_model":    config.llm_deep_model if config.llm_tool_calling else config.llm_model,
                     "llm_provider": config.llm_provider,
                 }
 

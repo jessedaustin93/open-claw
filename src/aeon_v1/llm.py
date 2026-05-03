@@ -201,7 +201,14 @@ def generate_with_memory(
     bus.subscribe("memory.query", index_agent._handle_bus_query)
     try:
         if config.llm_provider == "lmstudio":
-            return _call_lmstudio_with_tools(prompt, config)
+            result = _call_lmstudio_with_tools(prompt, config)
+            if result:
+                return result
+            return _call_lmstudio_messages(
+                [{"role": "user", "content": prompt}],
+                config,
+                model=config.llm_deep_model,
+            )
         # Other providers: fall back to inlined prompt (no tool calling)
         return generate_text(prompt, config)
     finally:
@@ -222,7 +229,7 @@ def _call_lmstudio_with_tools(prompt: str, config: Config) -> Optional[str]:
     try:
         for _ in range(_LM_STUDIO_MAX_ATTEMPTS):
             payload_data = {
-                "model":       config.llm_model,
+                "model":       config.llm_deep_model,
                 "messages":    messages,
                 "tools":       [QUERY_MEMORY_TOOL],
                 "tool_choice": "auto",
